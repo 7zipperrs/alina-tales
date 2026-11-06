@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <title>Волшебные сказки для Алины</title>
+  <meta name="description" content="Добрые персонализированные сказки на ночь с иллюстрациями от Google Gemini для Алины" />
+  <meta name="theme-color" content="#090b24" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Сказки Алины" />
+  <link rel="manifest" href="./manifest.json" />
+  <link rel="icon" type="image/svg+xml" href="./icon.svg" />
+  <link rel="apple-touch-icon" href="./icon.svg" />
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+  <!-- Celestial Starry Sky Background -->
+  <div class="sky-canvas" id="skyCanvas" aria-hidden="true">
+    <div class="nebula nebula-1"></div>
+    <div class="nebula nebula-2"></div>
+    <div class="nebula nebula-3"></div>
+    <div class="shooting-star"></div>
+  </div>
+
+  <div class="app-container">
+    <!-- Top Fairy-Tale Hero Header -->
+    <header class="app-header">
+      <div class="brand">
+        <div class="unicorn-mascot-wrap">
+          <img src="./unicorn.svg" alt="Волшебный единорог" class="unicorn-mascot" />
+        </div>
+        <div class="brand-text-col">
+          <h1 class="brand-title">
+            <span class="brand-title-gradient">Волшебные сказки для Алины</span> ✨
+          </h1>
+          <p class="brand-subtitle" id="aiModeSubtitle">Добрая книга чудес перед сном 🌙</p>
+        </div>
+      </div>
+      <div class="header-actions">
+        <button class="icon-btn" id="btnSleepMode" title="Ночной янтарный режим для спальни">🌙</button>
+        <button class="icon-btn" id="btnOpenSettings" title="Настройки">
+          🔑
+          <span class="status-dot connected" id="apiStatusDot"></span>
+        </button>
+      </div>
+    </header>
+
+    <!-- Navigation Tabs -->
+    <nav class="nav-tabs" role="tablist">
+      <button class="nav-tab active" data-tab="create" id="tabBtnCreate">✨ Создать</button>
+      <button class="nav-tab" data-tab="read" id="tabBtnRead">📖 Книжка</button>
+      <button class="nav-tab" data-tab="library" id="tabBtnLibrary">📚 Полка <span id="libraryCountBadge">(1)</span></button>
+    </nav>
+
+    <!-- TAB 1: CREATE STORY -->
+    <main id="viewCreate">
+      <!-- 1. Daughter's Photo & Magical Look -->
+      <section class="magic-card">
+        <div class="card-header">
+          <h2 class="card-title">👑 Образ главной героини (Алины)</h2>
+          <span class="card-badge" id="photoStatusBadge">✨ Волшебный образ</span>
+        </div>
+        <p class="card-hint">
+          Загрузите фото Алины, выберите её черты или впишите любые детали образа — они бережно вплетутся в сюжет сказки и иллюстрации!
+        </p>
+
+        <div class="hero-photo-box">
+          <div class="photo-avatar-wrap" id="avatarClickArea" title="Нажмите, чтобы выбрать фото Алины">
+            <span class="photo-crown">👑</span>
+            <div class="photo-avatar" id="photoPreviewBox">🩰</div>
+          </div>
+          <div class="photo-controls">
+            <input type="file" id="photoInput" accept="image/*" class="hidden" />
+            <button type="button" class="btn-upload" id="btnSelectPhoto">📸 Загрузить фото Алины</button>
+            <button type="button" class="btn-remove-photo hidden" id="btnRemovePhoto">Удалить</button>
+            <p class="card-hint" style="margin: 7px 0 0; font-size: 0.74rem;" id="photoAnalysisText">
+              Алина станет главной героиней на страницах и иллюстрациях книги ✨
+            </p>
+          </div>
+        </div>
+
+        <!-- Daughter Appearance Combo Inputs (Manual typing + Dropdown picker) -->
+        <div class="traits-drawer">
+          <!-- 1. Причёска -->
+          <div class="trait-row">
+            <label class="trait-label" for="traitHairStyle">Причёска (впишите свою или выберите из списка):</label>
+            <div class="combo-field" data-combo="hairStyle">
+              <input
+                type="text"
+                id="traitHairStyle"
+                class="combo-input"
+                value="Высокий пучок балерины с диадемой"
+                placeholder="Впишите причёску или нажмите ▾..."
+              />
+              <div class="combo-actions">
+                <button type="button" class="combo-clear-btn" data-clear="traitHairStyle" title="Очистить поле">✕</button>
+                <button type="button" class="combo-toggle-btn" data-toggle="dropdownHairStyle" title="Выбрать из списка">▾</button>
+              </div>
+              <div class="combo-dropdown hidden" id="dropdownHairStyle">
+                <div class="combo-option">Высокий пучок балерины с диадемой</div>
+                <div class="combo-option">Две косички с бантиками</div>
+                <div class="combo-option">Два весёлых хвостика с бантиками</div>
+                <div class="combo-option">Длинные распущенные локоны</div>
+                <div class="combo-option">Мягкие кудряшки до плеч с чёлкой</div>
+                <div class="combo-option">Аккуратное каре с чёлкой</div>
+                <div class="combo-option">Длинная коса со звёздочками</div>
+                <div class="combo-option">Длинные прямые волосы с блестящим ободком</div>
+                <div class="combo-option">Причёска принцессы с золотой короной</div>
+                <div class="combo-option">Высокий хвостик с большим бантом</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 2. Сказочный образ -->
+          <div class="trait-row">
+            <label class="trait-label" for="traitOutfit">Сказочный образ (впишите свой или выберите из списка):</label>
+            <div class="combo-field" data-combo="outfit">
+              <input
+                type="text"
+                id="traitOutfit"
+                class="combo-input"
+                value="Небесно-лиловая пачка балерины и пуанты"
+                placeholder="Впишите наряд/образ или нажмите ▾..."
+              />
+              <div class="combo-actions">
+                <button type="button" class="combo-clear-btn" data-clear="traitOutfit" title="Очистить поле">✕</button>
+                <button type="button" class="combo-toggle-btn" data-toggle="dropdownOutfit" title="Выбрать из списка">▾</button>
+              </div>
+              <div class="combo-dropdown hidden" id="dropdownOutfit">
+                <div class="combo-option">Небесно-лиловая пачка балерины и пуанты</div>
+                <div class="combo-option">Розовая воздушная пачка балерины</div>
+                <div class="combo-option">Звёздное бальное платье принцессы</div>
+                <div class="combo-option">Волшебная фея с сияющими крылышками</div>
+                <div class="combo-option">Снежная принцесса в хрустальном платье</div>
+                <div class="combo-option">Маленькая волшебница в звёздной мантии</div>
+                <div class="combo-option">Лесная эльфийка с цветочным венком</div>
+                <div class="combo-option">Отважная космическая путешественница</div>
+                <div class="combo-option">Королевское золотое платье с плащом</div>
+                <div class="combo-option">Уютная пижамка с единорожками</div>
+                <div class="combo-option">Любимое нарядное платьице с кружевами</div>
+                <div class="combo-option">Фигуристка на волшебном льду</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 3. Деталь / В руках -->
+          <div class="trait-row">
+            <label class="trait-label" for="traitAccessory">Деталь / В руках (впишите свою или выберите из списка):</label>
+            <div class="combo-field" data-combo="accessory">
+              <input
+                type="text"
+                id="traitAccessory"
+                class="combo-input"
+                value="Волшебная палочка со звездой"
+                placeholder="Впишите предмет или нажмите ▾..."
+              />
+              <div class="combo-actions">
+                <button type="button" class="combo-clear-btn" data-clear="traitAccessory" title="Очистить поле">✕</button>
+                <button type="button" class="combo-toggle-btn" data-toggle="dropdownAccessory" title="Выбрать из списка">▾</button>
+              </div>
+              <div class="combo-dropdown hidden" id="dropdownAccessory">
+                <div class="combo-option">Волшебная палочка со звездой</div>
+                <div class="combo-option">Сияющая хрустальная диадема</div>
+                <div class="combo-option">Любимая мягкая игрушка в руках</div>
+                <div class="combo-option">Волшебный звёздный фонарик</div>
+                <div class="combo-option">Букет светящихся лунных цветов</div>
+                <div class="combo-option">Хрустальные туфельки</div>
+                <div class="combo-option">Музыкальная шкатулка</div>
+                <div class="combo-option">Светящаяся бабочка на ладошке</div>
+                <div class="combo-option">Без предметов в руках</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Custom Appearance & Details Input -->
+        <label class="sub-label" for="inputCustomLook">✍️ Впишите свой образ или особые детали Алины (по желанию):</label>
+        <input
+          type="text"
+          id="inputCustomLook"
+          class="magic-input"
+          placeholder="Например: милая чёлка, ямочки на щёчках, розовый бантик, белые гольфики..."
+        />
+      </section>
+
+      <!-- 2. Main Characters -->
+      <section class="magic-card">
+        <div class="card-header">
+          <h2 class="card-title">🦄 Главные герои сказки</h2>
+          <span class="card-badge">Кто в сказке?</span>
+        </div>
+        <p class="card-hint">Выберите друзей Алины кнопками ниже или впишите любых своих персонажей:</p>
+        <input
+          type="text"
+          id="inputHeroes"
+          class="magic-input"
+          value="Алина-балерина, Кот Бегемот"
+          placeholder="Например: Алина-балерина, Кот Бегемот..."
+        />
+        <div class="chips-group" id="heroChips">
+          <button type="button" class="chip selected" data-hero="Алина-балерина">🩰 Алина-балерина</button>
+          <button type="button" class="chip selected" data-hero="Кот Бегемот">🐈‍⬛ Кот Бегемот</button>
+          <button type="button" class="chip" data-hero="Зайка Лучик">🐰 Зайка Лучик</button>
+          <button type="button" class="chip" data-hero="Единорожка Звёздочка">🦄 Единорожка Звёздочка</button>
+          <button type="button" class="chip" data-hero="Медвежонок Тёпа">🧸 Медвежонок Тёпа</button>
+          <button type="button" class="chip" data-hero="Совёнок Умник">🦉 Совёнок Умник</button>
+          <button type="button" class="chip" data-hero="Фея Снов">🧚‍♀️ Фея Снов</button>
+          <button type="button" class="chip" data-hero="Щенок Пушок">🐶 Щенок Пушок</button>
+          <button type="button" class="chip" data-hero="Лисичка Искорка">🦊 Лисичка Искорка</button>
+          <button type="button" class="chip" data-hero="Добрый Дракончик Облачко">🐉 Дракончик Облачко</button>
+          <button type="button" class="chip" data-hero="Дельфинчик Булька">🐬 Дельфинчик Булька</button>
+          <button type="button" class="chip" data-hero="Мама и Папа">👨‍👩‍👧 Мама и Папа</button>
+        </div>
+      </section>
+
+      <!-- 3. Reading Duration (Expanded!) -->
+      <section class="magic-card">
+        <div class="card-header">
+          <h2 class="card-title">⏳ Длительность чтения</h2>
+          <span class="card-badge" id="durationBadgeLabel">5 минут • 5 страниц</span>
+        </div>
+        <div class="duration-grid" id="durationSelector">
+          <div class="duration-option" data-minutes="2" data-pages="3">
+            <span class="duration-time">2 мин</span>
+            <span class="duration-desc">Колыбельная • 3 стр.</span>
+          </div>
+          <div class="duration-option" data-minutes="3" data-pages="4">
+            <span class="duration-time">3 мин</span>
+            <span class="duration-desc">Короткая • 4 стр.</span>
+          </div>
+          <div class="duration-option active" data-minutes="5" data-pages="5">
+            <span class="duration-time">5 мин</span>
+            <span class="duration-desc">Любимая • 5 стр.</span>
+          </div>
+          <div class="duration-option" data-minutes="7" data-pages="6">
+            <span class="duration-time">7 мин</span>
+            <span class="duration-desc">Уютная • 6 стр.</span>
+          </div>
+          <div class="duration-option" data-minutes="10" data-pages="8">
+            <span class="duration-time">10 мин</span>
+            <span class="duration-desc">Большая • 8 стр.</span>
+          </div>
+          <div class="duration-option" data-minutes="15" data-pages="10">
+            <span class="duration-time">15 мин</span>
+            <span class="duration-desc">Длинная • 10 стр.</span>
+          </div>
+        </div>
+        <div class="custom-duration-row">
+          <span>Своя длина:</span>
+          <input type="range" id="customDurationRange" min="2" max="15" value="5" />
+          <strong id="customDurationValue" style="color: #fde047; min-width: 52px; text-align: right;">5 мин</strong>
+        </div>
+      </section>
+
+      <!-- 4. Moral & Theme (18 Preset Buttons!) -->
+      <section class="magic-card">
+        <div class="card-header">
+          <h2 class="card-title">💖 Тематика и добрая мораль</h2>
+          <span class="card-badge">18 добрых тем</span>
+        </div>
+        <p class="card-hint">Выберите готовую полезную тему ниже или напишите свою ситуацию за сегодняшний день:</p>
+        <textarea
+          id="inputMoral"
+          class="magic-textarea"
+          placeholder="Например: Как важно верить в себя, дружить и помогать друзьям..."
+        >Как важно дружить, помогать близким и верить в свои силы, даже если что-то получается не сразу</textarea>
+        <div class="chips-group" id="moralChips">
+          <button type="button" class="chip selected" data-moral="Как важно дружить, помогать близким и верить в свои силы, даже если что-то получается не сразу">💝 Дружба и вера в себя</button>
+          <button type="button" class="chip" data-moral="Если стараться и не сдаваться на тренировках и в танцах, обязательно получится самый красивый пируэт">🩰 Старание и успех в танцах</button>
+          <button type="button" class="chip" data-moral="Почему важно с радостью чистить зубки и умываться перед сном, чтобы зубки сияли как жемчужинки">🦷 Чистить зубки перед сном</button>
+          <button type="button" class="chip" data-moral="Как здорово делиться игрушками и сладостями с друзьями — ведь общая радость становится вдвое больше">🧸 Делиться игрушками</button>
+          <button type="button" class="chip" data-moral="Ночь и темнота совсем не страшные, а добрые и уютные, потому что звёзды охраняют сладкие детские сны">🌙 Не бояться темноты</button>
+          <button type="button" class="chip" data-moral="Почему игрушки очень любят, когда перед сном их аккуратно убирают в свои домики на места">🧹 Убирать игрушки на место</button>
+          <button type="button" class="chip" data-moral="Волшебная сила вежливых слов «спасибо», «пожалуйста», «доброе утро» и «спокойной ночи»">🌸 Волшебные вежливые слова</button>
+          <button type="button" class="chip" data-moral="Как полезная вкусная еда (супчик, овощи и фрукты) дарит волшебные силы, красоту и бодрость">🥦 Кушать полезную еду</button>
+          <button type="button" class="chip" data-moral="Как здорово уметь одеваться самой и бережно относиться к своим красивым платьицам и туфелькам">👗 Одеваться самой и опрятность</button>
+          <button type="button" class="chip" data-moral="Самое большое волшебство на свете — это крепкая любовь мамы, папы и тёплые семейные объятия">💌 Любовь мамы и папы</button>
+          <button type="button" class="chip" data-moral="Как важно быть ласковой и заботливой с котиками, зверятами и природой вокруг нас">🐾 Забота о животных</button>
+          <button type="button" class="chip" data-moral="Почему всегда лучше сказать правду — ведь честность открывает любые двери и помогает исправить любую ошибку">🎭 Говорить правду и честность</button>
+          <button type="button" class="chip" data-moral="Как важно не дуться и не капризничать по пустякам, а уметь спокойно договориться и помириться с улыбкой">🌈 Не капризничать и мириться</button>
+          <button type="button" class="chip" data-moral="В детском садике и на занятиях ждут весёлые игры, новые открытия и добрые друзья">🎒 С радостью ходить в садик</button>
+          <button type="button" class="chip" data-moral="Почему важно слушаться маму и папу на прогулке и дома — ведь родители всегда берегут и желают добра">🛡️ Слушаться маму и папу</button>
+          <button type="button" class="chip" data-moral="Как приятно помогать маме и папе в маленьких домашних делах и чувствовать себя взрослой умницей">🏡 Помогать маме и папе</button>
+          <button type="button" class="chip" data-moral="Как смелость и любопытство помогают пробовать новое и не бояться незнакомых задачек">🦋 Смелость пробовать новое</button>
+          <button type="button" class="chip" data-moral="Когда глазки закрываются вовремя в своей уютной кроватке, приходят самые красочные волшебные сны">💤 Быстро и сладко засыпать</button>
+        </div>
+      </section>
+
+      <!-- 5. Illustration Style -->
+      <section class="magic-card">
+        <div class="card-header">
+          <h2 class="card-title">🎨 Стиль иллюстраций</h2>
+          <span class="card-badge">Художник</span>
+        </div>
+        <div class="style-grid" id="styleSelector">
+          <div class="style-option active" data-style="magical celestial fairytale storybook illustration, dreamy sky blue and violet night glow, golden stars, Disney Pixar and watercolor blend, warm cute characters">
+            <span class="style-emoji">🌌</span>
+            <span>Небесная сказка</span>
+          </div>
+          <div class="style-option" data-style="cute 3D Pixar Disney animation movie style, soft magical lighting, expressive adorable characters, vibrant pastel colors, high detail">
+            <span class="style-emoji">✨</span>
+            <span>3D Мультик Disney</span>
+          </div>
+          <div class="style-option" data-style="soft dreamy children book watercolor illustration, pastel sky blue and lavender tones, delicate golden sparkles, cozy bedtime art">
+            <span class="style-emoji">🎨</span>
+            <span>Нежная акварель</span>
+          </div>
+          <div class="style-option" data-style="classic enchanted royal storybook illustration, Beatrix Potter and magical fantasy style, rich starlight details">
+            <span class="style-emoji">📖</span>
+            <span>Волшебная книжка</span>
+          </div>
+          <div class="style-option" data-style="Studio Ghibli Hayao Miyazaki anime fairytale style, lush magical night sky, warm cozy glow, charming expressive girl and cat">
+            <span class="style-emoji">🌠</span>
+            <span>Стиль Миядзаки</span>
+          </div>
+          <div class="style-option" data-style="warm colored pencil and pastel chalk children book illustration, soft fairytale textures, gentle bedtime atmosphere">
+            <span class="style-emoji">🖍️</span>
+            <span>Цветные карандаши</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- Generate Button -->
+      <button type="button" class="generate-btn" id="btnGenerateStory">
+        <span>✨ Сотворить волшебную сказку для Алины</span>
+      </button>
+
+      <!-- Loading State Card (Hidden until generating) -->
+      <div class="magic-card magic-loader hidden" id="loadingCard">
+        <div class="spinner-orb">🪄</div>
+        <h3 style="margin: 0 0 8px; color: #fde047;" id="loadingTitle">Звёздная фея сочиняет сказку...</h3>
+        <p class="card-hint" id="loadingStepText" style="margin: 0;">
+          Приглашаем Алину-балерину и Кота Бегемота в волшебный мир...
+        </p>
+      </div>
+    </main>
+
+    <!-- TAB 2: BOOK READER -->
+    <section id="viewRead" class="hidden">
+      <div class="reader-toolbar">
+        <div class="toolbar-group">
+          <button type="button" class="tool-pill" id="btnFontDec" title="Уменьшить шрифт">А-</button>
+          <button type="button" class="tool-pill" id="btnFontInc" title="Увеличить шрифт">А+</button>
+          <button type="button" class="tool-pill" id="btnVoiceRead" title="Озвучить страницу">🔊 Слушать</button>
+        </div>
+        <div class="toolbar-group">
+          <button type="button" class="tool-pill" id="btnToggleArtMode" title="Переключить режим иллюстрации и фото-открытки с Алиной">🖼️ Фото-открытка</button>
+          <button type="button" class="tool-pill" id="btnSaveStory" title="Сохранить в любимые сказки">⭐ В полку</button>
+        </div>
+      </div>
+
+      <article class="book-page-card" id="bookPageCard">
+        <div class="story-title-banner">
+          <h2 id="readerStoryTitle">Алина-балерина, Кот Бегемот и Звёздные Пуанты</h2>
+          <div class="story-meta-pills">
+            <span id="readerMetaHeroes">🩰 Алина-балерина, Кот Бегемот</span>
+            <span>•</span>
+            <span id="readerMetaTime">⏱ ~5 мин чтения</span>
+          </div>
+        </div>
+
+        <!-- Illustration Stage -->
+        <div class="illustration-stage" id="illustrationStage">
+          <span class="page-counter-pill" id="pageCounterPill">Страница 1 из 5</span>
+          <button type="button" class="redraw-btn" id="btnRedrawPage" title="Перерисовать иллюстрацию к этой главе">🎨 Перерисовать</button>
+          <span class="engine-badge-pill" id="engineBadgePill">✨ Сказочная иллюстрация</span>
+
+          <img id="sceneImage" class="scene-image" alt="Иллюстрация к сказке" />
+
+          <div class="image-loading-overlay hidden" id="imageLoadingOverlay">
+            <div class="spinner-orb" style="width: 48px; height: 48px; font-size: 1.4rem; margin-bottom: 4px;">🎨</div>
+            <span id="imageLoadingLabel">Волшебная кисть рисует иллюстрацию к этой главе...</span>
+          </div>
+
+          <!-- Daughter's Photo Medallion -->
+          <div class="hero-medallion hidden" id="readerHeroMedallion" title="Нажмите, чтобы развернуть фото-портрет Алины">
+            <span class="hero-medallion-crown">👑</span>
+            <img id="readerMedallionImg" alt="Алина" />
+            <span class="hero-medallion-badge">Алина ✨</span>
+          </div>
+        </div>
+
+        <!-- Story Text Content -->
+        <div class="story-page-content" id="storyTouchArea">
+          <h3 class="chapter-heading" id="readerChapterTitle">Глава 1</h3>
+          <div class="story-paragraphs" id="readerPageText"></div>
+          <div class="moral-callout hidden" id="readerMoralBox"></div>
+        </div>
+
+        <!-- Bottom Page Flip Controls -->
+        <div class="page-nav-bar">
+          <button type="button" class="nav-page-btn" id="btnPrevPage">← Назад</button>
+          <button type="button" class="nav-page-btn primary" id="btnNextPage">Дальше →</button>
+        </div>
+      </article>
+    </section>
+
+    <!-- TAB 3: SAVED LIBRARY -->
+    <section id="viewLibrary" class="hidden">
+      <div class="magic-card">
+        <div class="card-header">
+          <h2 class="card-title">📚 Любимые сказки Алины</h2>
+          <span class="card-badge">В памяти телефона</span>
+        </div>
+        <p class="card-hint">
+          Здесь бережно хранятся созданные сказки — нажмите на любую, чтобы открыть и читать:
+        </p>
+        <div class="library-list" id="libraryList"></div>
+      </div>
+    </section>
+  </div>
+
+  <!-- GEMINI SETTINGS MODAL -->
+  <div class="modal-backdrop hidden" id="settingsModal">
+    <div class="modal-sheet">
+      <div class="card-header">
+        <h2 class="card-title">✨ Настройки Google Gemini</h2>
+        <button type="button" class="icon-btn" id="btnCloseSettings" style="width: 34px; height: 34px;">✕</button>
+      </div>
+
+      <div class="step-box">
+        <strong style="color: #fde047;">🔑 Ваш ключ Google Gemini API уже встроен и активен!</strong><br />
+        Приложение использует исключительно <strong>Google Gemini</strong> и для сочинения сказок (с анализом фото Алины), и для рисования иллюстраций к каждой главе.<br /><br />
+        <em>Важная деталь для России:</em> Сервер Google Gemini требует включённого VPN (на вашем iPhone с VPN всё работает напрямую!). Если вы хотите, чтобы этот ключ работал даже <strong>без VPN</strong>, откройте один раз с VPN ссылку вашего проекта Google Cloud:<br />
+        <a href="https://console.developers.google.com/apis/api/aiplatform.googleapis.com/overview?project=452686405470" target="_blank" rel="noopener" style="color: #7dd3fc; word-break: break-all;">Включить Vertex AI API (проект 452686405470)</a> и нажмите синюю кнопку <strong>«Enable / Включить»</strong>.
+      </div>
+
+      <div class="step-box" style="margin-bottom: 0;">
+        <label class="sub-label" for="inputGeminiKey" style="margin-top: 0;">Ключ Google Gemini API:</label>
+        <input
+          type="password"
+          id="inputGeminiKey"
+          class="magic-input"
+          placeholder="Ваш ключ Gemini API..."
+        />
+        <div style="display: flex; gap: 8px; margin-top: 10px;">
+          <button type="button" class="btn-upload" id="btnSaveAllKeys" style="flex: 1; justify-content: center; padding: 11px;">💾 Сохранить ключ</button>
+          <button type="button" class="btn-upload" id="btnResetDefaultKey" style="background: rgba(56, 189, 248, 0.2);">Вернуть ваш ключ</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="./app.js"></script>
+</body>
+</html>
