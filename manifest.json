@@ -1,0 +1,20 @@
+{
+  "name": "Волшебные сказки для Алины",
+  "short_name": "Сказки Алины",
+  "description": "Персональные волшебные сказки на ночь с иллюстрациями для Алины",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#090b24",
+  "theme_color": "#090b24",
+  "lang": "ru",
+  "icons": [
+    {
+      "src": "./icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
