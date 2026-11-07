@@ -1,4 +1,4 @@
-const CACHE_NAME = "starlight-tales-v2";
+const CACHE_NAME = "starlight-tales-v4";
 const ASSETS = [
   "./",
   "./index.html",
@@ -10,8 +10,9 @@ const ASSETS = [
 ];
 
 self.addEventListener("install", (event) => {
+  self.skipWaiting();
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => cache.addAll(ASSETS)).then(() => self.skipWaiting())
+    caches.open(CACHE_NAME).then((cache) => cache.addAll(ASSETS))
   );
 });
 
@@ -23,12 +24,19 @@ self.addEventListener("activate", (event) => {
   );
 });
 
+// Network-first strategy so updates on GitHub Pages appear immediately on iPhone
 self.addEventListener("fetch", (event) => {
   if (event.request.method !== "GET") return;
   const url = new URL(event.request.url);
   if (url.origin === self.location.origin) {
     event.respondWith(
-      caches.match(event.request).then((cached) => cached || fetch(event.request))
+      fetch(event.request)
+        .then((networkResp) => {
+          const clone = networkResp.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
+          return networkResp;
+        })
+        .catch(() => caches.match(event.request))
     );
   }
 });
