@@ -128,7 +128,7 @@ function initStarrySky() {
 
 function registerServiceWorker() {
   if ("serviceWorker" in navigator && location.protocol.startsWith("http")) {
-    navigator.serviceWorker.register("./sw.js?v=6").catch(() => {});
+    navigator.serviceWorker.register("./sw.js?v=7").catch(() => {});
   }
 }
 
@@ -849,8 +849,8 @@ function parseStoryJson(rawText) {
 }
 
 // ============================================================================
-// МНОГОПОТОЧНЫЙ РОТАТОР ИЛЛЮСТРАЦИЙ (5 НЕЗАВИСИМЫХ СЕРВЕРОВ FLUX + NANO BANANA)
-// Каждая глава идёт на свой сервер по кругу, поэтому лимит после 1-й картинки НЕ срабатывает!
+// ГЕНЕРАЦИЯ ИЛЛЮСТРАЦИЙ СТРОГО ЧЕРЕЗ GOOGLE NANO BANANA
+// Глава 1 открывается сразу, а главы 2..N дорисовываются в фоне через Nano Banana!
 // ============================================================================
 async function generatePageIllustrationSmart(story, pageIndex) {
   const page = story.pages[pageIndex];
@@ -858,227 +858,69 @@ async function generatePageIllustrationSmart(story, pageIndex) {
 
   page.isGeneratingImage = true;
   const stylePrompt = story.style || state.selectedStyle;
-  const seed = page.customSeed || pageIndex * 173 + 42;
-  const fullScenePrompt = `${page.scenePrompt}, ${stylePrompt}, masterpiece children's fairytale storybook illustration, warm magical lighting, cute expressive faces, no text, no watermark`;
+  const fullScenePrompt = `Scene from chapter "${page.chapterTitle}": ${page.scenePrompt}. Style: ${stylePrompt}. Masterpiece children's fairytale storybook illustration, warm magical lighting, cute expressive characters, no text or watermarks.`;
 
-  // Список из 5 независимых серверов FLUX (начинаем с сервера под номером pageIndex, чтобы страницы 1, 2, 3, 4, 5 шли на РАЗНЫЕ серверы!)
-  const fluxServers = [
-    {
-      name: "FLUX.1 Schnell",
-      host: "https://black-forest-labs-flux-1-schnell.hf.space",
-      endpoint: "/gradio_api/call/infer",
-      buildData: (p, s) => [p, s % 2147483647, false, 768, 768, 4]
-    },
-    {
-      name: "Realtime FLUX",
-      host: "https://kingnish-realtime-flux.hf.space",
-      endpoint: "/gradio_api/call/RealtimeFlux",
-      buildData: (p, s) => [p, s % 2147483647, 768, 768, false, 2]
-    },
-    {
-      name: "FLUX.2 Klein",
-      host: "https://black-forest-labs-flux-2-klein-9b.hf.space",
-      endpoint: "/gradio_api/call/generate",
-      buildData: (p, s) => [p, [], "Distilled (4 steps)", s % 2147483647, false, 768, 768, 4, 1.0, false]
-    },
-    {
-      name: "FLUX.1 Merged",
-      host: "https://multimodalart-flux-1-merged.hf.space",
-      endpoint: "/gradio_api/call/infer",
-      buildData: (p, s) => [p, s % 2147483647, false, 768, 768, 3.5, 8]
-    },
-    {
-      name: "FLUX.1 Dev",
-      host: "https://black-forest-labs-flux-1-dev.hf.space",
-      endpoint: "/gradio_api/call/infer",
-      buildData: (p, s) => [p, s % 2147483647, false, 768, 768, 3.5, 20]
-    }
-  ];
-
-  // Если загружено фото Алины и это первая попытка, сначала пробуем FLUX.1 Kontext (перенос образа с фото)
-  if (state.daughterPhotoDataUrl && pageIndex === 0) {
-    try {
-      const kontextUrl = await callFluxKontextWithPhoto(
-        state.daughterPhotoDataUrl,
-        fullScenePrompt,
-        seed
-      );
-      if (kontextUrl) {
-        page.cachedImageUrl = kontextUrl;
-        page.cachedEngineLabel = "✨ Иллюстрация по фото Алины";
-        page.isGeneratingImage = false;
-        setDiagLog(`Глава ${pageIndex + 1}: нарисовано через FLUX Kontext по фото!`);
-        return true;
-      }
-    } catch (e) {}
-  }
-
-  // Ротация по 5 независимым серверам FLUX (Глава 1 -> Сервер 1, Глава 2 -> Сервер 2, и т.д.)
-  for (let offset = 0; offset < fluxServers.length; offset++) {
-    const srv = fluxServers[(pageIndex + offset) % fluxServers.length];
-    try {
-      setDiagLog(`Глава ${pageIndex + 1}: рисует ${srv.name}...`);
-      const imgUrl = await callGradioSpaceServer(srv, fullScenePrompt, seed + offset);
-      if (imgUrl) {
-        page.cachedImageUrl = imgUrl;
-        page.cachedEngineLabel = `✨ ${srv.name}`;
-        page.isGeneratingImage = false;
-        setDiagLog(`Глава ${pageIndex + 1}: готово (${srv.name})!`);
-        return true;
-      }
-    } catch (e) {}
-  }
-
-  // Дополнительно пробуем Nano Banana (если на аккаунте включён платный/бонусный лимит Google)
-  try {
-    const nanoUrl = await tryNanoBananaOnce(fullScenePrompt, state.daughterPhotoDataUrl);
-    if (nanoUrl) {
-      page.cachedImageUrl = nanoUrl;
-      page.cachedEngineLabel = "✨ Nano Banana";
-      page.isGeneratingImage = false;
-      return true;
-    }
-  } catch (e) {}
-
-  page.isGeneratingImage = false;
-  return false;
-}
-
-async function callGradioSpaceServer(srv, prompt, seed) {
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 24000);
-
-  try {
-    const callResp = await fetch(`${srv.host}${srv.endpoint}`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      signal: controller.signal,
-      body: JSON.stringify({
-        data: srv.buildData(prompt, seed)
-      })
-    });
-    if (!callResp.ok) return null;
-    const { event_id } = await callResp.json();
-    if (!event_id) return null;
-
-    const streamResp = await fetch(`${srv.host}${srv.endpoint}/${event_id}`, {
-      signal: controller.signal
-    });
-    if (!streamResp.ok) return null;
-    const sseText = await streamResp.text();
-
-    const lines = sseText.split("\n");
-    for (const line of lines) {
-      if (line.startsWith("data:")) {
-        const rawJson = line.slice(5).trim();
-        try {
-          const parsed = JSON.parse(rawJson);
-          if (Array.isArray(parsed) && parsed[0]) {
-            const first = parsed[0];
-            if (typeof first === "string" && first.startsWith("http")) return first;
-            if (first.url) return first.url;
-            if (first.path) return `${srv.host}/gradio_api/file=${first.path}`;
-          }
-        } catch (err) {}
-      }
-    }
-    return null;
-  } finally {
-    clearTimeout(timeoutId);
-  }
-}
-
-// Перенос реального фото Алины в иллюстрацию через FLUX.1 Kontext
-async function callFluxKontextWithPhoto(photoDataUrl, scenePrompt, seed) {
-  const host = "https://black-forest-labs-flux-1-kontext-dev.hf.space";
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 25000);
-
-  try {
-    const resBlob = await fetch(photoDataUrl);
-    const blob = await resBlob.blob();
-    const formData = new FormData();
-    formData.append("files", blob, "alina.jpg");
-
-    const upResp = await fetch(`${host}/gradio_api/upload`, {
-      method: "POST",
-      signal: controller.signal,
-      body: formData
-    });
-    if (!upResp.ok) return null;
-    const upPaths = await upResp.json();
-    const serverPath = upPaths?.[0];
-    if (!serverPath) return null;
-
-    const editPrompt = `Transform this cute 5-year-old girl into a magical children's fairytale book illustration, keeping her facial features and hair recognizable: ${scenePrompt}`;
-    const callResp = await fetch(`${host}/gradio_api/call/infer`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      signal: controller.signal,
-      body: JSON.stringify({
-        data: [
-          { path: serverPath, meta: { _type: "gradio.FileData" } },
-          editPrompt,
-          seed % 2147483647,
-          false,
-          2.5,
-          20
-        ]
-      })
-    });
-    if (!callResp.ok) return null;
-    const { event_id } = await callResp.json();
-    if (!event_id) return null;
-
-    const streamResp = await fetch(`${host}/gradio_api/call/infer/${event_id}`, {
-      signal: controller.signal
-    });
-    if (!streamResp.ok) return null;
-    const sseText = await streamResp.text();
-
-    for (const line of sseText.split("\n")) {
-      if (line.startsWith("data:")) {
-        try {
-          const parsed = JSON.parse(line.slice(5).trim());
-          const first = parsed?.[0];
-          if (first?.url) return first.url;
-          if (first?.path) return `${host}/gradio_api/file=${first.path}`;
-        } catch (err) {}
-      }
-    }
-    return null;
-  } finally {
-    clearTimeout(timeoutId);
-  }
-}
-
-async function tryNanoBananaOnce(scenePrompt, photoDataUrl) {
   const parts = [];
-  if (photoDataUrl) {
+  if (state.daughterPhotoDataUrl) {
     parts.push({
       inlineData: {
         mimeType: "image/jpeg",
-        data: photoDataUrl.split(",")[1]
+        data: state.daughterPhotoDataUrl.split(",")[1]
       }
     });
+    parts.push({
+      text: `You are a children's book illustrator. Look at this reference photo of 5-year-old Alina. Keep her exact hair color, hairstyle, eye color, and sweet facial features recognizable as the main character in this fairytale storybook illustration: ${fullScenePrompt}`
+    });
+  } else {
+    parts.push({
+      text: `Create a magical children's fairytale storybook illustration: ${fullScenePrompt}`
+    });
   }
-  parts.push({ text: `Create a fairytale book illustration: ${scenePrompt}` });
 
-  const res = await callGeminiApi("gemini-2.5-flash-image", {
-    contents: [{ parts }],
-    generationConfig: { responseModalities: ["TEXT", "IMAGE"] }
-  });
-  if (!res.ok) return null;
+  // Список моделей семейства Google Nano Banana (если одна уже сработала, используем сразу её)
+  const nanoModels = state.workingNanoModel
+    ? [state.workingNanoModel]
+    : [
+        "gemini-2.5-flash-image",
+        "gemini-3.1-flash-image",
+        "gemini-3.1-flash-lite-image",
+        "gemini-nano-banana-2.1"
+      ];
 
-  const candidateParts = res.data?.candidates?.[0]?.content?.parts || [];
-  for (const p of candidateParts) {
-    const inline = p.inlineData || p.inline_data;
-    if (inline && inline.data) {
-      const mime = inline.mimeType || inline.mime_type || "image/png";
-      return `data:${mime};base64,${inline.data}`;
-    }
+  for (const modelName of nanoModels) {
+    try {
+      setDiagLog(`Глава ${pageIndex + 1}: Nano Banana (${modelName}) рисует иллюстрацию...`);
+      const res = await callGeminiApi(modelName, {
+        contents: [{ parts }],
+        generationConfig: {
+          responseModalities: ["TEXT", "IMAGE"]
+        }
+      });
+
+      if (res.ok) {
+        const candidateParts = res.data?.candidates?.[0]?.content?.parts || [];
+        for (const p of candidateParts) {
+          const inline = p.inlineData || p.inline_data;
+          if (inline && inline.data) {
+            const mime = inline.mimeType || inline.mime_type || "image/png";
+            state.workingNanoModel = modelName;
+            page.cachedImageUrl = `data:${mime};base64,${inline.data}`;
+            page.cachedEngineLabel = "✨ Nano Banana";
+            page.isGeneratingImage = false;
+            setDiagLog(`Глава ${pageIndex + 1}: успешно нарисована через Nano Banana (${modelName})!`);
+            return true;
+          }
+        }
+      } else if (res.status === 429 && (res.errorText || "").includes("limit: 0")) {
+        setDiagLog(
+          `Для работы Nano Banana (${modelName}) в Google AI Studio нужно привязать карту (Set up Billing на aistudio.google.com/apikey)`
+        );
+      }
+    } catch (e) {}
   }
-  return null;
+
+  page.isGeneratingImage = false;
+  return false;
 }
 
 function buildEnrichedScenePromptFromChapter(aiScenePrompt, chapterRuText, heroesRu, pageIdx, totalPages) {
