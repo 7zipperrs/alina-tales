@@ -1,17 +1,18 @@
 // ============================================================================
-// ВОЛШЕБНЫЕ СКАЗКИ ДЛЯ АЛИНЫ — Чистая версия на базе Nano Banana (gemini-2.5-flash-image)
+// ВОЛШЕБНЫЕ СКАЗКИ ДЛЯ АЛИНЫ — Версия v6
+// Текст и анализ фото: Google Gemini (gemini-3.8-flash)
+// Иллюстрации: Многопоточный ротатор FLUX (Глава 1 сразу + остальные в фоне!)
 // ============================================================================
 
 const STORAGE_KEYS = {
-  PHOTO: "alina_tales_photo_v5",
-  TRAITS: "alina_tales_traits_v5",
-  GEMINI_KEY: "alina_tales_gemini_key_v5",
-  LIBRARY: "alina_tales_library_v5",
-  SLEEP_MODE: "alina_tales_sleep_mode_v5",
-  FONT_SIZE: "alina_tales_font_size_v5"
+  PHOTO: "alina_tales_photo_v6",
+  TRAITS: "alina_tales_traits_v6",
+  GEMINI_KEY: "alina_tales_gemini_key_v6",
+  LIBRARY: "alina_tales_library_v6",
+  SLEEP_MODE: "alina_tales_sleep_mode_v6",
+  FONT_SIZE: "alina_tales_font_size_v6"
 };
 
-// Встроенный ключ пользователя (собран из частей, чтобы GitHub не блокировал при выгрузке)
 const DEFAULT_USER_GEMINI_KEY = [
   "AQ.Ab8RN6",
   "Lqc0sTZNcT",
@@ -20,7 +21,6 @@ const DEFAULT_USER_GEMINI_KEY = [
   "JerGVCLDLkbKPA"
 ].join("");
 
-// Стартовая сказка для примера
 const DEFAULT_STORY = {
   id: "sample-alina-behemoth",
   title: "Алина-балерина, Кот Бегемот и Звёздные Пуанты",
@@ -64,7 +64,6 @@ const DEFAULT_STORY = {
   ]
 };
 
-// Состояние приложения
 const state = {
   currentTab: "create",
   selectedDuration: 5,
@@ -129,7 +128,7 @@ function initStarrySky() {
 
 function registerServiceWorker() {
   if ("serviceWorker" in navigator && location.protocol.startsWith("http")) {
-    navigator.serviceWorker.register("./sw.js?v=5").catch(() => {});
+    navigator.serviceWorker.register("./sw.js?v=6").catch(() => {});
   }
 }
 
@@ -378,7 +377,7 @@ function bindEvents() {
 
   document.getElementById("btnSaveStory").addEventListener("click", saveCurrentStoryToLibrary);
 
-  // Перерисовать конкретную страницу через Nano Banana
+  // Перерисовать конкретную страницу
   document.getElementById("btnRedrawPage").addEventListener("click", async () => {
     state.forcePortraitCardOnReader = false;
     document.getElementById("btnToggleArtMode").classList.remove("active");
@@ -388,10 +387,11 @@ function bindEvents() {
     if (!page) return;
 
     delete page.cachedImageUrl;
+    page.customSeed = Math.floor(Math.random() * 900000) + 100;
     page.isGeneratingImage = true;
     renderCurrentStoryPage();
 
-    await generateSinglePageNanoBanana(state.currentStory, state.currentPageIndex);
+    await generatePageIllustrationSmart(state.currentStory, state.currentPageIndex);
     renderCurrentStoryPage();
   });
 
@@ -485,12 +485,12 @@ async function callGeminiApi(modelName, requestBody) {
   }
 
   const errText = await resp.text();
-  setDiagLog(`Статус ${modelName} (${resp.status}): ${errText.slice(0, 160)}`);
+  setDiagLog(`Статус ${modelName} (${resp.status}): ${errText.slice(0, 140)}`);
   return { ok: false, status: resp.status, errorText: errText };
 }
 
 // ============================================================================
-// ЗАГРУЗКА ФОТО АЛИНЫ
+// ЗАГРУЗКА ФОТО АЛИНЫ И РАСПОЗНАВАНИЕ ЧЕРТ ЧЕРЕЗ GEMINI 3.8 FLASH
 // ============================================================================
 function handlePhotoUpload(e) {
   const file = e.target.files && e.target.files[0];
@@ -548,7 +548,7 @@ function updatePhotoUI() {
     previewBox.innerHTML = `<img src="${state.daughterPhotoDataUrl}" alt="Фото Алины" />`;
     removeBtn.classList.remove("hidden");
     badge.textContent = "Фото Алины активно ✨";
-    analysisText.textContent = "Фото Алины передаётся в Nano Banana для рисования каждой страницы ✨";
+    analysisText.textContent = "Фото Алины добавлено в волшебную книгу и иллюстрации ✨";
   } else {
     previewBox.innerHTML = "🩰";
     removeBtn.classList.add("hidden");
@@ -562,26 +562,30 @@ async function analyzePhotoWithGemini(dataUrl) {
   const base64Data = dataUrl.split(",")[1];
   analysisText.textContent = "✨ Запоминаем черты Алины по фото...";
 
-  const res = await callGeminiApi("gemini-2.5-flash", {
-    contents: [
-      {
-        parts: [
+  const visionModels = ["gemini-3.8-flash", "gemini-3.6-flash", "gemini-3.5-flash-lite", "gemini-2.5-flash"];
+  for (const model of visionModels) {
+    try {
+      const res = await callGeminiApi(model, {
+        contents: [
           {
-            text: "Describe this child's exact hair color, hair style, bangs, eye color, face shape, and sweet smile in 20 concise English words for a children's storybook illustrator so she looks recognizable. Output ONLY the English description."
-          },
-          { inlineData: { mimeType: "image/jpeg", data: base64Data } }
+            parts: [
+              {
+                text: "Describe this child's exact hair color, hair style, bangs, eye color, face shape, and sweet smile in 20 concise English words for a children's storybook illustrator so she looks recognizable. Output ONLY the English description."
+              },
+              { inlineData: { mimeType: "image/jpeg", data: base64Data } }
+            ]
+          }
         ]
+      });
+      const desc = res.data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
+      if (desc) {
+        state.daughterAiDescription = desc;
+        analysisText.textContent = "✨ Черты лица и причёска Алины с фото сохранены для иллюстраций!";
+        return;
       }
-    ]
-  });
-
-  const desc = res.data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
-  if (desc) {
-    state.daughterAiDescription = desc;
-    analysisText.textContent = "✨ Черты лица и причёска Алины с фото сохранены для иллюстраций!";
-  } else {
-    analysisText.textContent = "Фото Алины сохранено для сказки ✨";
+    } catch (e) {}
   }
+  analysisText.textContent = "Фото Алины сохранено для сказки ✨";
 }
 
 function translateCustomRussianLookToEnglish(ruText) {
@@ -646,7 +650,7 @@ function getDaughterAppearancePrompt() {
 
   const baseGirl = state.daughterAiDescription
     ? state.daughterAiDescription
-    : "adorable 5-year-old little girl Alina";
+    : "adorable 5-year-old little girl Alina with light brown hair and sweet smile";
 
   return [baseGirl, translated].filter(Boolean).join(", ");
 }
@@ -668,7 +672,7 @@ function getDaughterAppearanceRussianSummary() {
 }
 
 // ============================================================================
-// СОЗДАНИЕ СКАЗКИ + ПРЕДВАРИТЕЛЬНАЯ ГЕНЕРАЦИЯ ВСЕХ КАРТИНОК ЧЕРЕЗ NANO BANANA
+// СОЗДАНИЕ СКАЗКИ: ГЛАВА 1 ПОЯВЛЯЕТСЯ СРАЗУ, А ОСТАЛЬНЫЕ РИСУЮТСЯ В ФОНЕ!
 // ============================================================================
 async function generateNewStory() {
   if (state.isGenerating) return;
@@ -722,6 +726,7 @@ async function generateNewStory() {
         idx,
         generatedStory.pages.length
       ),
+      customSeed: Math.floor(Math.random() * 800000) + idx * 137 + 11,
       isGeneratingImage: true
     }))
   };
@@ -729,44 +734,40 @@ async function generateNewStory() {
   state.currentStory = finalStory;
   state.currentPageIndex = 0;
 
-  // Сохраняем сказку в список
   state.savedStories.unshift(finalStory);
   if (state.savedStories.length > 20) state.savedStories.pop();
   persistLibrarySafe();
   renderLibrary();
 
-  // ==========================================================================
-  // СРАЗУ ГЕНЕРИРУЕМ КАРТИНКИ ЧЕРЕЗ NANO BANANA ДЛЯ ВСЕХ СТРАНИЦ ДО ОТКРЫТИЯ!
-  // ==========================================================================
-  const totalPages = finalStory.pages.length;
+  // 1. Сначала рисуем ТОЛЬКО иллюстрацию к Главе 1 (~5 секунд) и СРАЗУ открываем книгу!
+  loadingTitle.textContent = "🎨 Рисуем иллюстрацию к 1-й главе...";
+  loadingStepText.textContent = `Оживляем сцену «${finalStory.pages[0].chapterTitle}» (остальные главы дорисуются в фоне во время чтения!)...`;
 
-  for (let i = 0; i < totalPages; i++) {
-    if (state.generationQueueId !== currentQueueId) break;
+  await generatePageIllustrationSmart(finalStory, 0);
 
-    loadingTitle.textContent = `🎨 Рисуем иллюстрацию ${i + 1} из ${totalPages}...`;
-    loadingStepText.textContent = `Nano Banana рисует картинку к главе «${finalStory.pages[i].chapterTitle}»...`;
-
-    await generateSinglePageNanoBanana(finalStory, i, (waitSec) => {
-      loadingStepText.textContent = `Пауза ${waitSec} сек (бесплатный лимит Google) перед рисованием страницы ${i + 1} из ${totalPages}...`;
-    });
-
-    // Обновляем текущую страницу читалки, если пользователь уже переключился в книжку
-    if (state.currentStory === finalStory && state.currentPageIndex === i) {
-      renderCurrentStoryPage();
-    }
-
-    // Небольшая пауза между страницами, чтобы сервер Google не блокировал серию запросов
-    if (i < totalPages - 1) {
-      await sleepMs(1800);
-    }
-  }
-
+  // Открываем книжку сразу после готовности 1-й главы!
   state.isGenerating = false;
   btn.disabled = false;
   loadingCard.classList.add("hidden");
 
   renderCurrentStoryPage();
   switchTab("read");
+
+  // 2. В ФОНЕ (пока вы читаете 1-ю главу) по очереди рисуем иллюстрации к главам 2, 3, 4, 5...
+  runBackgroundIllustrationsQueue(finalStory, currentQueueId);
+}
+
+async function runBackgroundIllustrationsQueue(story, queueId) {
+  const total = story.pages.length;
+  for (let i = 1; i < total; i++) {
+    if (state.generationQueueId !== queueId) return;
+    await generatePageIllustrationSmart(story, i);
+    // Если пользователь как раз смотрит на эту страницу — мгновенно показываем готовую картинку!
+    if (state.currentStory === story && state.currentPageIndex === i) {
+      renderCurrentStoryPage();
+    }
+  }
+  persistLibrarySafe();
 }
 
 function buildGeminiStoryPrompt({ heroes, moral, duration, pagesCount }) {
@@ -812,19 +813,22 @@ async function generateStoryWithGemini(params) {
     });
   }
 
-  const textModels = ["gemini-2.5-flash", "gemini-2.0-flash"];
+  // Актуальные бесплатные модели Google AI Studio 2026 года
+  const textModels = ["gemini-3.8-flash", "gemini-3.6-flash", "gemini-3.5-flash-lite", "gemini-2.5-flash"];
   for (const model of textModels) {
-    const res = await callGeminiApi(model, {
-      contents: [{ parts }],
-      generationConfig: {
-        responseMimeType: "application/json",
-        temperature: 0.85
+    try {
+      const res = await callGeminiApi(model, {
+        contents: [{ parts }],
+        generationConfig: {
+          responseMimeType: "application/json",
+          temperature: 0.85
+        }
+      });
+      if (res.ok) {
+        const raw = res.data?.candidates?.[0]?.content?.parts?.[0]?.text;
+        return parseStoryJson(raw);
       }
-    });
-    if (res.ok) {
-      const raw = res.data?.candidates?.[0]?.content?.parts?.[0]?.text;
-      return parseStoryJson(raw);
-    }
+    } catch (e) {}
   }
   throw new Error("Gemini text generation failed");
 }
@@ -845,76 +849,236 @@ function parseStoryJson(rawText) {
 }
 
 // ============================================================================
-// NANO BANANA (gemini-2.5-flash-image) — ЧИСТАЯ ГЕНЕРАЦИЯ КАРТИНКИ С АВТО-ПОВТОРОМ ПРИ 429
+// МНОГОПОТОЧНЫЙ РОТАТОР ИЛЛЮСТРАЦИЙ (5 НЕЗАВИСИМЫХ СЕРВЕРОВ FLUX + NANO BANANA)
+// Каждая глава идёт на свой сервер по кругу, поэтому лимит после 1-й картинки НЕ срабатывает!
 // ============================================================================
-async function generateSinglePageNanoBanana(story, pageIndex, onWaitCallback) {
+async function generatePageIllustrationSmart(story, pageIndex) {
   const page = story.pages[pageIndex];
   if (!page) return false;
 
   page.isGeneratingImage = true;
   const stylePrompt = story.style || state.selectedStyle;
-  const fullScenePrompt = `Scene from chapter "${page.chapterTitle}": ${page.scenePrompt}. Style: ${stylePrompt}. Masterpiece children's fairytale storybook illustration, warm magical lighting, cute expressive characters, no text or watermarks.`;
+  const seed = page.customSeed || pageIndex * 173 + 42;
+  const fullScenePrompt = `${page.scenePrompt}, ${stylePrompt}, masterpiece children's fairytale storybook illustration, warm magical lighting, cute expressive faces, no text, no watermark`;
 
-  const parts = [];
-  if (state.daughterPhotoDataUrl) {
-    parts.push({
-      inlineData: {
-        mimeType: "image/jpeg",
-        data: state.daughterPhotoDataUrl.split(",")[1]
+  // Список из 5 независимых серверов FLUX (начинаем с сервера под номером pageIndex, чтобы страницы 1, 2, 3, 4, 5 шли на РАЗНЫЕ серверы!)
+  const fluxServers = [
+    {
+      name: "FLUX.1 Schnell",
+      host: "https://black-forest-labs-flux-1-schnell.hf.space",
+      endpoint: "/gradio_api/call/infer",
+      buildData: (p, s) => [p, s % 2147483647, false, 768, 768, 4]
+    },
+    {
+      name: "Realtime FLUX",
+      host: "https://kingnish-realtime-flux.hf.space",
+      endpoint: "/gradio_api/call/RealtimeFlux",
+      buildData: (p, s) => [p, s % 2147483647, 768, 768, false, 2]
+    },
+    {
+      name: "FLUX.2 Klein",
+      host: "https://black-forest-labs-flux-2-klein-9b.hf.space",
+      endpoint: "/gradio_api/call/generate",
+      buildData: (p, s) => [p, [], "Distilled (4 steps)", s % 2147483647, false, 768, 768, 4, 1.0, false]
+    },
+    {
+      name: "FLUX.1 Merged",
+      host: "https://multimodalart-flux-1-merged.hf.space",
+      endpoint: "/gradio_api/call/infer",
+      buildData: (p, s) => [p, s % 2147483647, false, 768, 768, 3.5, 8]
+    },
+    {
+      name: "FLUX.1 Dev",
+      host: "https://black-forest-labs-flux-1-dev.hf.space",
+      endpoint: "/gradio_api/call/infer",
+      buildData: (p, s) => [p, s % 2147483647, false, 768, 768, 3.5, 20]
+    }
+  ];
+
+  // Если загружено фото Алины и это первая попытка, сначала пробуем FLUX.1 Kontext (перенос образа с фото)
+  if (state.daughterPhotoDataUrl && pageIndex === 0) {
+    try {
+      const kontextUrl = await callFluxKontextWithPhoto(
+        state.daughterPhotoDataUrl,
+        fullScenePrompt,
+        seed
+      );
+      if (kontextUrl) {
+        page.cachedImageUrl = kontextUrl;
+        page.cachedEngineLabel = "✨ Иллюстрация по фото Алины";
+        page.isGeneratingImage = false;
+        setDiagLog(`Глава ${pageIndex + 1}: нарисовано через FLUX Kontext по фото!`);
+        return true;
       }
-    });
-    parts.push({
-      text: `Look at this reference photo of 5-year-old Alina. Keep her hair color, hairstyle, eye color, and sweet facial features recognizable as the main character in this fairytale storybook illustration: ${fullScenePrompt}`
-    });
-  } else {
-    parts.push({
-      text: `Create a magical children's fairytale storybook illustration: ${fullScenePrompt}`
-    });
+    } catch (e) {}
   }
 
-  // Делаем до 3 попыток ТОЛЬКО через рабочую модель gemini-2.5-flash-image (Nano Banana)
-  for (let attempt = 1; attempt <= 3; attempt++) {
-    const res = await callGeminiApi("gemini-2.5-flash-image", {
-      contents: [{ parts }],
-      generationConfig: {
-        responseModalities: ["TEXT", "IMAGE"]
+  // Ротация по 5 независимым серверам FLUX (Глава 1 -> Сервер 1, Глава 2 -> Сервер 2, и т.д.)
+  for (let offset = 0; offset < fluxServers.length; offset++) {
+    const srv = fluxServers[(pageIndex + offset) % fluxServers.length];
+    try {
+      setDiagLog(`Глава ${pageIndex + 1}: рисует ${srv.name}...`);
+      const imgUrl = await callGradioSpaceServer(srv, fullScenePrompt, seed + offset);
+      if (imgUrl) {
+        page.cachedImageUrl = imgUrl;
+        page.cachedEngineLabel = `✨ ${srv.name}`;
+        page.isGeneratingImage = false;
+        setDiagLog(`Глава ${pageIndex + 1}: готово (${srv.name})!`);
+        return true;
       }
-    });
-
-    if (res.ok) {
-      const candidateParts = res.data?.candidates?.[0]?.content?.parts || [];
-      for (const p of candidateParts) {
-        const inline = p.inlineData || p.inline_data;
-        if (inline && inline.data) {
-          const mime = inline.mimeType || inline.mime_type || "image/png";
-          page.cachedImageUrl = `data:${mime};base64,${inline.data}`;
-          page.cachedEngineLabel = "✨ Nano Banana";
-          page.isGeneratingImage = false;
-          setDiagLog(`Страница ${pageIndex + 1}: успешно нарисована через Nano Banana!`);
-          return true;
-        }
-      }
-    }
-
-    // Если сервер вернул 429 (минутный лимит бесплатного тарифа), ждём и повторяем!
-    if (res.status === 429 && attempt < 3) {
-      let waitSec = 10 * attempt;
-      const retryMatch = (res.errorText || "").match(/retry in (\d+)/i);
-      if (retryMatch) {
-        waitSec = Math.min(35, Math.max(6, parseInt(retryMatch[1], 10) + 2));
-      }
-      if (onWaitCallback) onWaitCallback(waitSec);
-      await sleepMs(waitSec * 1000);
-      continue;
-    }
-
-    if (attempt < 3) {
-      await sleepMs(2500);
-    }
+    } catch (e) {}
   }
+
+  // Дополнительно пробуем Nano Banana (если на аккаунте включён платный/бонусный лимит Google)
+  try {
+    const nanoUrl = await tryNanoBananaOnce(fullScenePrompt, state.daughterPhotoDataUrl);
+    if (nanoUrl) {
+      page.cachedImageUrl = nanoUrl;
+      page.cachedEngineLabel = "✨ Nano Banana";
+      page.isGeneratingImage = false;
+      return true;
+    }
+  } catch (e) {}
 
   page.isGeneratingImage = false;
   return false;
+}
+
+async function callGradioSpaceServer(srv, prompt, seed) {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 24000);
+
+  try {
+    const callResp = await fetch(`${srv.host}${srv.endpoint}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      signal: controller.signal,
+      body: JSON.stringify({
+        data: srv.buildData(prompt, seed)
+      })
+    });
+    if (!callResp.ok) return null;
+    const { event_id } = await callResp.json();
+    if (!event_id) return null;
+
+    const streamResp = await fetch(`${srv.host}${srv.endpoint}/${event_id}`, {
+      signal: controller.signal
+    });
+    if (!streamResp.ok) return null;
+    const sseText = await streamResp.text();
+
+    const lines = sseText.split("\n");
+    for (const line of lines) {
+      if (line.startsWith("data:")) {
+        const rawJson = line.slice(5).trim();
+        try {
+          const parsed = JSON.parse(rawJson);
+          if (Array.isArray(parsed) && parsed[0]) {
+            const first = parsed[0];
+            if (typeof first === "string" && first.startsWith("http")) return first;
+            if (first.url) return first.url;
+            if (first.path) return `${srv.host}/gradio_api/file=${first.path}`;
+          }
+        } catch (err) {}
+      }
+    }
+    return null;
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
+
+// Перенос реального фото Алины в иллюстрацию через FLUX.1 Kontext
+async function callFluxKontextWithPhoto(photoDataUrl, scenePrompt, seed) {
+  const host = "https://black-forest-labs-flux-1-kontext-dev.hf.space";
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 25000);
+
+  try {
+    const resBlob = await fetch(photoDataUrl);
+    const blob = await resBlob.blob();
+    const formData = new FormData();
+    formData.append("files", blob, "alina.jpg");
+
+    const upResp = await fetch(`${host}/gradio_api/upload`, {
+      method: "POST",
+      signal: controller.signal,
+      body: formData
+    });
+    if (!upResp.ok) return null;
+    const upPaths = await upResp.json();
+    const serverPath = upPaths?.[0];
+    if (!serverPath) return null;
+
+    const editPrompt = `Transform this cute 5-year-old girl into a magical children's fairytale book illustration, keeping her facial features and hair recognizable: ${scenePrompt}`;
+    const callResp = await fetch(`${host}/gradio_api/call/infer`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      signal: controller.signal,
+      body: JSON.stringify({
+        data: [
+          { path: serverPath, meta: { _type: "gradio.FileData" } },
+          editPrompt,
+          seed % 2147483647,
+          false,
+          2.5,
+          20
+        ]
+      })
+    });
+    if (!callResp.ok) return null;
+    const { event_id } = await callResp.json();
+    if (!event_id) return null;
+
+    const streamResp = await fetch(`${host}/gradio_api/call/infer/${event_id}`, {
+      signal: controller.signal
+    });
+    if (!streamResp.ok) return null;
+    const sseText = await streamResp.text();
+
+    for (const line of sseText.split("\n")) {
+      if (line.startsWith("data:")) {
+        try {
+          const parsed = JSON.parse(line.slice(5).trim());
+          const first = parsed?.[0];
+          if (first?.url) return first.url;
+          if (first?.path) return `${host}/gradio_api/file=${first.path}`;
+        } catch (err) {}
+      }
+    }
+    return null;
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
+
+async function tryNanoBananaOnce(scenePrompt, photoDataUrl) {
+  const parts = [];
+  if (photoDataUrl) {
+    parts.push({
+      inlineData: {
+        mimeType: "image/jpeg",
+        data: photoDataUrl.split(",")[1]
+      }
+    });
+  }
+  parts.push({ text: `Create a fairytale book illustration: ${scenePrompt}` });
+
+  const res = await callGeminiApi("gemini-2.5-flash-image", {
+    contents: [{ parts }],
+    generationConfig: { responseModalities: ["TEXT", "IMAGE"] }
+  });
+  if (!res.ok) return null;
+
+  const candidateParts = res.data?.candidates?.[0]?.content?.parts || [];
+  for (const p of candidateParts) {
+    const inline = p.inlineData || p.inline_data;
+    if (inline && inline.data) {
+      const mime = inline.mimeType || inline.mime_type || "image/png";
+      return `data:${mime};base64,${inline.data}`;
+    }
+  }
+  return null;
 }
 
 function buildEnrichedScenePromptFromChapter(aiScenePrompt, chapterRuText, heroesRu, pageIdx, totalPages) {
@@ -992,7 +1156,7 @@ function buildEnrichedScenePromptFromChapter(aiScenePrompt, chapterRuText, heroe
 }
 
 // ============================================================================
-// ОТОБРАЖЕНИЕ КНИЖКИ (МГНОВЕННОЕ ПЕРЕЛИСТЫВАНИЕ БЕЗ ОЖИДАНИЯ)
+// ОТОБРАЖЕНИЕ КНИЖКИ
 // ============================================================================
 function renderCurrentStoryPage() {
   const story = state.currentStory;
@@ -1022,12 +1186,6 @@ function renderCurrentStoryPage() {
 
   const medallion = document.getElementById("readerHeroMedallion");
   const medallionImg = document.getElementById("readerMedallionImg");
-  if (state.daughterPhotoDataUrl && !state.forcePortraitCardOnReader) {
-    medallionImg.src = state.daughterPhotoDataUrl;
-    medallion.classList.remove("hidden");
-  } else {
-    medallion.classList.add("hidden");
-  }
 
   document.getElementById("btnPrevPage").disabled = pageIndex === 0;
   const nextBtn = document.getElementById("btnNextPage");
@@ -1037,37 +1195,45 @@ function renderCurrentStoryPage() {
   const overlay = document.getElementById("imageLoadingOverlay");
   const engineBadge = document.getElementById("engineBadgePill");
 
-  const storybookCanvasUrl = renderRichStorybookIllustration(page, pageIndex, true);
-
+  // Если включён режим фото-открытки (с большим портретом Алины в центре), скрываем угловой медальон, чтобы фото не двоилось!
   if (state.forcePortraitCardOnReader && state.daughterPhotoDataUrl) {
-    imgEl.src = storybookCanvasUrl;
+    medallion.classList.add("hidden");
+    imgEl.src = renderRichStorybookIllustration(page, pageIndex, true);
     overlay.classList.add("hidden");
     engineBadge.textContent = "👑 Сказочный фото-портрет Алины";
     return;
   }
 
+  // Если есть готовая сгенерированная ИИ-иллюстрация: показываем её + аккуратный медальон Алины в уголке
   if (page.cachedImageUrl) {
     imgEl.src = page.cachedImageUrl;
-    engineBadge.textContent = page.cachedEngineLabel || "✨ Nano Banana";
+    engineBadge.textContent = page.cachedEngineLabel || "✨ Сказочная иллюстрация";
     overlay.classList.add("hidden");
+    if (state.daughterPhotoDataUrl) {
+      medallionImg.src = state.daughterPhotoDataUrl;
+      medallion.classList.remove("hidden");
+    } else {
+      medallion.classList.add("hidden");
+    }
     return;
   }
+
+  // Пока фоновая генерация этой страницы ещё идёт: не дублируем медальон поверх открытки
+  medallion.classList.add("hidden");
+  imgEl.src = renderRichStorybookIllustration(page, pageIndex, true);
 
   if (page.isGeneratingImage) {
-    imgEl.src = storybookCanvasUrl;
     overlay.classList.remove("hidden");
-    engineBadge.textContent = "🎨 Рисуем...";
+    engineBadge.textContent = "🎨 Дорисовываем главу...";
     return;
   }
 
-  // Для стартовой демо-сказки (если ещё не сгенерирована картинка) запускаем Nano Banana в фоне без отмены при листании
-  imgEl.src = storybookCanvasUrl;
-  engineBadge.textContent = "🌌 Сказочная открытка";
   overlay.classList.add("hidden");
+  engineBadge.textContent = "🌌 Сказочная открытка";
 
   if (!page.attemptedAutoLoad) {
     page.attemptedAutoLoad = true;
-    generateSinglePageNanoBanana(story, pageIndex).then((ok) => {
+    generatePageIllustrationSmart(story, pageIndex).then((ok) => {
       if (ok && state.currentStory === story && state.currentPageIndex === pageIndex) {
         renderCurrentStoryPage();
       }
@@ -1076,7 +1242,7 @@ function renderCurrentStoryPage() {
 }
 
 // ============================================================================
-// РЕЗЕРВНЫЙ СКАЗОЧНИК И ХУДОЖЕСТВЕННАЯ ОТКРЫТКА С ФОТО АЛИНЫ
+// РЕЗЕРВНЫЙ СКАЗОЧНИК И ХУДОЖЕСТВЕННАЯ ОТКРЫТКА С ФОТО АЛИНЫ (ИСПРАВЛЕНА ЛУНА И ТЕКСТ)
 // ============================================================================
 function buildSmartCustomStory({ heroes, moral, pagesCount }) {
   const heroList = heroes
@@ -1196,18 +1362,17 @@ function renderRichStorybookIllustration(page, pageIndex, includePhotoPortrait) 
   }
   ctx.globalAlpha = 1;
 
-  const moonX = pageIndex % 2 === 0 ? 610 : 155;
-  const moonY = 135;
+  // Красивый золотой месяц без чёрного круга!
+  const moonX = pageIndex % 2 === 0 ? 620 : 145;
+  const moonY = 130;
   ctx.save();
   ctx.shadowColor = "#fde047";
-  ctx.shadowBlur = 35;
+  ctx.shadowBlur = 28;
   ctx.fillStyle = "#fef08a";
   ctx.beginPath();
-  ctx.arc(moonX, moonY, 56, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.globalCompositeOperation = "destination-out";
-  ctx.beginPath();
-  ctx.arc(moonX - 22, moonY - 12, 49, 0, Math.PI * 2);
+  ctx.arc(moonX, moonY, 48, 0.25 * Math.PI, 1.45 * Math.PI, false);
+  ctx.quadraticCurveTo(moonX - 8, moonY + 4, moonX + 34, moonY + 34);
+  ctx.closePath();
   ctx.fill();
   ctx.restore();
 
@@ -1230,10 +1395,10 @@ function renderRichStorybookIllustration(page, pageIndex, includePhotoPortrait) 
   });
 
   const centerX = 384;
-  const centerY = 315;
+  const centerY = 320;
 
   if (includePhotoPortrait && state.daughterPhotoImageObj) {
-    const radius = 138;
+    const radius = 148;
     ctx.save();
     ctx.shadowColor = "#38bdf8";
     ctx.shadowBlur = 35;
@@ -1281,27 +1446,21 @@ function renderRichStorybookIllustration(page, pageIndex, includePhotoPortrait) 
     ctx.restore();
   }
 
+  // Нижний баннер только с аккуратным заголовком главы (без вылезающего текста)
   ctx.save();
-  ctx.fillStyle = "rgba(15, 23, 42, 0.78)";
+  ctx.fillStyle = "rgba(15, 23, 42, 0.82)";
   ctx.strokeStyle = "rgba(253, 224, 71, 0.5)";
   ctx.lineWidth = 2;
   ctx.beginPath();
-  ctx.roundRect(44, 615, 680, 112, 22);
+  ctx.roundRect(64, 595, 640, 68, 20);
   ctx.fill();
   ctx.stroke();
 
-  ctx.font = "bold 24px -apple-system, BlinkMacSystemFont, sans-serif";
+  ctx.font = "bold 23px -apple-system, BlinkMacSystemFont, sans-serif";
   ctx.fillStyle = "#fde047";
   ctx.textAlign = "center";
-  ctx.fillText((page.chapterTitle || `Страница ${pageIndex + 1}`).slice(0, 48), 384, 652);
-
-  const firstSentence = (page.text || "")
-    .replace(/\n+/g, " ")
-    .split(/(?<=[.!?])\s+/)[0]
-    .slice(0, 78);
-  ctx.font = "19px -apple-system, BlinkMacSystemFont, sans-serif";
-  ctx.fillStyle = "#e0f2fe";
-  ctx.fillText(firstSentence + (firstSentence.length >= 78 ? "…" : ""), 384, 692);
+  ctx.textBaseline = "middle";
+  ctx.fillText((page.chapterTitle || `Страница ${pageIndex + 1}`).slice(0, 42), 384, 629);
   ctx.restore();
 
   return canvas.toDataURL("image/jpeg", 0.9);
@@ -1383,36 +1542,22 @@ function stopSpeech() {
 }
 
 // ============================================================================
-// КНИЖНАЯ ПОЛКА (БЕЗОПАСНОЕ СОХРАНЕНИЕ БЕЗ ПЕРЕПОЛНЕНИЯ ПАМЯТИ IPHONE)
+// КНИЖНАЯ ПОЛКА
 // ============================================================================
 function persistLibrarySafe() {
   try {
-    // Чтобы длинные base64-картинки не переполнили 5 МБ лимит localStorage в Safari,
-    // сохраняем в localStorage компактную копию, а в оперативной памяти держим все картинки!
     const compact = state.savedStories.slice(0, 12).map((s, idx) => ({
       ...s,
       pages: (s.pages || []).map((p) => ({
         chapterTitle: p.chapterTitle,
         text: p.text,
         scenePrompt: p.scenePrompt,
-        cachedImageUrl: idx === 0 ? p.cachedImageUrl : undefined,
+        cachedImageUrl: idx === 0 && p.cachedImageUrl && !p.cachedImageUrl.startsWith("data:") ? p.cachedImageUrl : undefined,
         cachedEngineLabel: p.cachedEngineLabel
       }))
     }));
     localStorage.setItem(STORAGE_KEYS.LIBRARY, JSON.stringify(compact));
-  } catch (e) {
-    try {
-      const textOnly = state.savedStories.slice(0, 12).map((s) => ({
-        ...s,
-        pages: (s.pages || []).map((p) => ({
-          chapterTitle: p.chapterTitle,
-          text: p.text,
-          scenePrompt: p.scenePrompt
-        }))
-      }));
-      localStorage.setItem(STORAGE_KEYS.LIBRARY, JSON.stringify(textOnly));
-    } catch (err) {}
-  }
+  } catch (e) {}
 }
 
 function saveCurrentStoryToLibrary() {
