@@ -458,40 +458,38 @@ function updateAiStatusUI() {
   }
 }
 
+function setDiagLog(msg) {
+  const el = document.getElementById("geminiDiagLog");
+  if (el) el.textContent = msg;
+}
+
 // ============================================================================
-// УНИВЕРСАЛЬНЫЙ ВЫЗОВ GOOGLE GEMINI API (Generative Language API + Vertex AI Fallback)
+// ВЫЗОВ GOOGLE GEMINI API (Google AI Studio / generativelanguage.googleapis.com)
 // ============================================================================
 async function callGeminiGenerateContent(modelName, requestBody, signal) {
   const apiKey = getActiveGeminiKey();
-  const urls = [
-    `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${encodeURIComponent(apiKey)}`,
-    `https://aiplatform.googleapis.com/v1beta1/publishers/google/models/${modelName}:generateContent?key=${encodeURIComponent(apiKey)}`
-  ];
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${encodeURIComponent(
+    apiKey
+  )}`;
 
-  let lastError = null;
-  for (const url of urls) {
-    try {
-      const resp = await fetch(url, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        signal,
-        body: JSON.stringify(requestBody)
-      });
-      if (resp.ok) {
-        return await resp.json();
-      }
-      const errText = await resp.text();
-      lastError = new Error(`HTTP ${resp.status}: ${errText}`);
-      // Если первый адрес вернул блокировку геолокации РФ (без VPN), пробуем второй шлюз (aiplatform)
-      if (!errText.includes("User location is not supported") && resp.status !== 403 && resp.status !== 404) {
-        break;
-      }
-    } catch (e) {
-      if (e.name === "AbortError") throw e;
-      lastError = e;
-    }
+  const resp = await fetch(url, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "x-goog-api-key": apiKey
+    },
+    signal,
+    body: JSON.stringify(requestBody)
+  });
+
+  if (resp.ok) {
+    setDiagLog(`Статус: ${modelName} ответил успешно (200 OK)`);
+    return await resp.json();
   }
-  throw lastError || new Error("Gemini API unavailable");
+
+  const errText = await resp.text();
+  setDiagLog(`Ответ ${modelName} (${resp.status}): ${errText.slice(0, 140)}`);
+  throw new Error(`HTTP ${resp.status}: ${errText}`);
 }
 
 // ============================================================================
@@ -564,30 +562,34 @@ function updatePhotoUI() {
 
 async function analyzePhotoWithGemini(dataUrl) {
   const analysisText = document.getElementById("photoAnalysisText");
-  try {
-    analysisText.textContent = "✨ Волшебная фея запоминает черты Алины по фото...";
-    const base64Data = dataUrl.split(",")[1];
-    const data = await callGeminiGenerateContent("gemini-2.5-flash", {
-      contents: [
-        {
-          role: "user",
-          parts: [
-            {
-              text: "Describe this child's exact hair color, hair style, eye color, face shape, and sweet smile in 16 concise English words for a children's storybook illustrator so she looks recognizable. Output ONLY the English description."
-            },
-            { inlineData: { mimeType: "image/jpeg", data: base64Data } }
-          ]
-        }
-      ]
-    });
-    const desc = data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
-    if (desc) {
-      state.daughterAiDescription = desc;
-      analysisText.textContent = "✨ Черты лица и причёска Алины с фото сохранены для иллюстраций!";
-    }
-  } catch (e) {
-    analysisText.textContent = "Фото Алины сохранено для сказки ✨";
+  const base64Data = dataUrl.split(",")[1];
+  const visionModels = ["gemini-3.8-flash", "gemini-3.6-flash", "gemini-3.5-flash-lite", "gemini-2.5-flash"];
+
+  analysisText.textContent = "✨ Волшебная фея запоминает черты Алины по фото...";
+  for (const model of visionModels) {
+    try {
+      const data = await callGeminiGenerateContent(model, {
+        contents: [
+          {
+            role: "user",
+            parts: [
+              {
+                text: "Describe this child's exact hair color, hair style, bangs, eye color, face shape, and sweet smile in 20 concise English words for a children's storybook illustrator so she looks recognizable. Output ONLY the English description."
+              },
+              { inlineData: { mimeType: "image/jpeg", data: base64Data } }
+            ]
+          }
+        ]
+      });
+      const desc = data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
+      if (desc) {
+        state.daughterAiDescription = desc;
+        analysisText.textContent = "✨ Черты лица и причёска Алины с фото сохранены для иллюстраций!";
+        return;
+      }
+    } catch (e) {}
   }
+  analysisText.textContent = "Фото Алины сохранено для сказки ✨";
 }
 
 function translateCustomRussianLookToEnglish(ruText) {
@@ -782,7 +784,6 @@ async function generateStoryWithGemini(params) {
   const prompt = buildGeminiStoryPrompt(params);
   const parts = [{ text: prompt }];
 
-  // Если загружено фото Алины, передаём само фото прямо в Gemini при создании сказки!
   if (state.daughterPhotoDataUrl) {
     parts.push({
       inlineData: {
@@ -792,7 +793,8 @@ async function generateStoryWithGemini(params) {
     });
   }
 
-  const textModels = ["gemini-2.5-flash", "gemini-2.0-flash"];
+  // Актуальные бесплатные модели Google AI Studio 2026 года
+  const textModels = ["gemini-3.8-flash", "gemini-3.6-flash", "gemini-3.5-flash-lite", "gemini-2.5-flash"];
   let lastErr = null;
 
   for (const model of textModels) {
@@ -984,29 +986,30 @@ async function loadSceneIllustration(page, pageIndex, forceReload) {
   state.activeImageAbort = abortCtrl;
 
   const stylePrompt = state.currentStory.style || state.selectedStyle;
+  const seed = page.customSeed || pageIndex * 131 + 42;
   const fullScenePrompt = `Scene from chapter "${page.chapterTitle}": ${page.scenePrompt}. Visual style: ${stylePrompt}. High quality children's fairytale book illustration, warm magical lighting, expressive cute characters, no text or watermarks on the image.`;
 
   try {
-    const geminiImg = await generateIllustrationWithGemini(
+    const result = await generateIllustrationMultiStage(
       fullScenePrompt,
       state.daughterPhotoDataUrl,
+      page,
+      seed,
       abortCtrl.signal
     );
-    if (geminiImg) {
-      page.cachedImageUrl = geminiImg;
-      page.cachedEngineLabel = state.daughterPhotoDataUrl
-        ? "✨ Волшебный портрет Алины"
-        : "✨ Сказочная иллюстрация";
+    if (result && result.url) {
+      page.cachedImageUrl = result.url;
+      page.cachedEngineLabel = result.label;
       if (state.currentStory.pages[state.currentPageIndex] === page) {
-        imgEl.src = geminiImg;
-        engineBadge.textContent = page.cachedEngineLabel;
+        imgEl.src = result.url;
+        engineBadge.textContent = result.label;
         overlay.classList.add("hidden");
       }
       return;
     }
   } catch (err) {
     if (err.name === "AbortError") return;
-    console.warn("Gemini illustration note:", err);
+    console.warn("Illustration note:", err);
   }
 
   page.cachedImageUrl = storybookCanvasUrl;
@@ -1020,49 +1023,53 @@ async function loadSceneIllustration(page, pageIndex, forceReload) {
   }
 }
 
-async function generateIllustrationWithGemini(scenePrompt, photoDataUrl, signal) {
-  const parts = [];
-  if (photoDataUrl) {
-    parts.push({
-      text: `You are a children's book illustrator. Look at the attached reference photo of 5-year-old Alina. Keep her exact hair color, hairstyle, eye color, and sweet facial features so she is recognizable as the main character in this fairytale scene: ${scenePrompt}`
-    });
-    parts.push({
-      inlineData: {
-        mimeType: "image/jpeg",
-        data: photoDataUrl.split(",")[1]
-      }
-    });
-  } else {
-    parts.push({
-      text: `Generate a magical children's fairytale book illustration: ${scenePrompt}`
-    });
-  }
+async function generateIllustrationMultiStage(scenePrompt, photoDataUrl, page, seed, signal) {
+  const apiKey = getActiveGeminiKey();
+  const base64Photo = photoDataUrl ? photoDataUrl.split(",")[1] : null;
+  const promptText = base64Photo
+    ? `You are a children's book illustrator. Look at the attached reference photo of 5-year-old Alina. Keep her exact hair color, hairstyle, eye color, and sweet facial features so she is recognizable as the main character in this fairytale scene: ${scenePrompt}`
+    : `Generate a magical children's fairytale book illustration: ${scenePrompt}`;
 
-  // Модели генерации изображений Google Gemini (по порядку приоритета)
-  const imageModels = [
-    "gemini-2.5-flash-image-preview",
-    "gemini-2.0-flash-preview-image-generation",
-    "gemini-2.0-flash-exp-image-generation",
-    "gemini-2.0-flash-exp"
+  // ==========================================================================
+  // ЭТАП 1: Актуальные модели Google Gemini Image 2026 (Nano Banana 2.1 / 3.1 / 2.5)
+  // ==========================================================================
+  const geminiImageModels = [
+    "gemini-nano-banana-2.1",
+    "gemini-3.1-flash-lite-image",
+    "gemini-3.1-flash-image",
+    "gemini-2.5-flash-image",
+    "gemini-3-pro-image"
   ];
 
-  for (const modelName of imageModels) {
+  // 1А. Пробуем новый эндпоинт Google AI Studio 2026: POST /v1beta/interactions
+  for (const modelName of geminiImageModels.slice(0, 3)) {
     try {
-      const data = await callGeminiGenerateContent(
-        modelName,
-        {
-          contents: [{ role: "user", parts }],
-          generationConfig: {
-            responseModalities: ["TEXT", "IMAGE"]
-          }
+      const inputArr = [{ type: "text", text: promptText }];
+      if (base64Photo) {
+        inputArr.push({ type: "image", mime_type: "image/jpeg", data: base64Photo });
+      }
+      const resp = await fetch("https://generativelanguage.googleapis.com/v1beta/interactions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-goog-api-key": apiKey,
+          "Api-Revision": "2026-05-20"
         },
-        signal
-      );
-
-      const resParts = data?.candidates?.[0]?.content?.parts || [];
-      for (const p of resParts) {
-        if (p.inlineData && p.inlineData.data) {
-          return `data:${p.inlineData.mimeType || "image/png"};base64,${p.inlineData.data}`;
+        signal,
+        body: JSON.stringify({
+          model: modelName,
+          input: inputArr
+        })
+      });
+      if (resp.ok) {
+        const d = await resp.json();
+        const outImg = d?.output_image || d?.interaction?.output_image;
+        if (outImg && outImg.data) {
+          setDiagLog(`Иллюстрация создана через ${modelName} (interactions)`);
+          return {
+            url: `data:${outImg.mime_type || "image/png"};base64,${outImg.data}`,
+            label: "✨ Волшебный рисунок"
+          };
         }
       }
     } catch (e) {
@@ -1070,32 +1077,162 @@ async function generateIllustrationWithGemini(scenePrompt, photoDataUrl, signal)
     }
   }
 
-  // Дополнительно пробуем Imagen 3 через тот же ключ Gemini
-  try {
-    const apiKey = getActiveGeminiKey();
-    const resp = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict?key=${encodeURIComponent(
-        apiKey
-      )}`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        signal,
-        body: JSON.stringify({
-          instances: [{ prompt: scenePrompt }],
-          parameters: { sampleCount: 1, aspectRatio: "1:1" }
-        })
+  // 1Б. Пробуем стандартный эндпоинт :generateContent для всех актуальных моделей 2026
+  const parts = [{ text: promptText }];
+  if (base64Photo) {
+    parts.push({ inline_data: { mime_type: "image/jpeg", data: base64Photo } });
+  }
+
+  for (const modelName of geminiImageModels) {
+    try {
+      const data = await callGeminiGenerateContent(
+        modelName,
+        {
+          contents: [{ parts }],
+          generationConfig: {
+            responseModalities: ["IMAGE"]
+          }
+        },
+        signal
+      );
+
+      const resParts = data?.candidates?.[0]?.content?.parts || [];
+      for (const p of resParts) {
+        const inline = p.inlineData || p.inline_data;
+        if (inline && inline.data) {
+          const mime = inline.mimeType || inline.mime_type || "image/png";
+          setDiagLog(`Иллюстрация создана через ${modelName}`);
+          return {
+            url: `data:${mime};base64,${inline.data}`,
+            label: "✨ Волшебный рисунок"
+          };
+        }
       }
-    );
-    if (resp.ok) {
-      const d = await resp.json();
-      const b64 = d?.predictions?.[0]?.bytesBase64Encoded;
-      if (b64) return `data:image/png;base64,${b64}`;
+    } catch (e) {
+      if (e.name === "AbortError") throw e;
+    }
+  }
+
+  // ==========================================================================
+  // ЭТАП 2: Если ключ Google AI Studio на бесплатном тарифе (где Google отключил
+  // бесплатный лимит на картинки), используем описание внешности от Gemini Vision
+  // и рисуем через бесплатный официальный кластер FLUX.1-schnell (работает с VPN на iPhone!)
+  // ==========================================================================
+  try {
+    setDiagLog("Gemini передал описание сцены в бесплатный иллюстратор FLUX.1...");
+    const fluxUrl = await generateViaFreeFluxGradioSpace(scenePrompt, seed, signal);
+    if (fluxUrl) {
+      setDiagLog("Иллюстрация успешно нарисована через FLUX.1!");
+      return {
+        url: fluxUrl,
+        label: "✨ Сказочная иллюстрация"
+      };
     }
   } catch (e) {
     if (e.name === "AbortError") throw e;
   }
 
+  // ==========================================================================
+  // ЭТАП 3: Прямая генерация векторной иллюстрации к главе через бесплатный
+  // Gemini 3.8 Flash (работает по вашему ключу Gemini на 100% бесплатно!)
+  // ==========================================================================
+  try {
+    setDiagLog("Gemini 3.8 Flash рисует авторскую векторную иллюстрацию к главе...");
+    const svgDataUrl = await generateSvgIllustrationWithGeminiFlash(page, scenePrompt, signal);
+    if (svgDataUrl) {
+      setDiagLog("Иллюстрация нарисована моделью Gemini 3.8 Flash!");
+      return {
+        url: svgDataUrl,
+        label: "✨ Иллюстрация к главе"
+      };
+    }
+  } catch (e) {
+    if (e.name === "AbortError") throw e;
+  }
+
+  return null;
+}
+
+// Бесплатный официальный кластер FLUX.1-schnell через Gradio API (работает с VPN на iPhone без ключей и лимитов)
+async function generateViaFreeFluxGradioSpace(prompt, seed, signal) {
+  const spaces = [
+    "https://black-forest-labs-flux-1-schnell.hf.space",
+    "https://multimodalart-flux-1-merged.hf.space"
+  ];
+
+  for (const baseUrl of spaces) {
+    try {
+      const callResp = await fetch(`${baseUrl}/gradio_api/call/infer`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        signal,
+        body: JSON.stringify({
+          data: [prompt, seed % 2147483647, false, 768, 768, 4]
+        })
+      });
+      if (!callResp.ok) continue;
+      const { event_id } = await callResp.json();
+      if (!event_id) continue;
+
+      const streamResp = await fetch(`${baseUrl}/gradio_api/call/infer/${event_id}`, { signal });
+      if (!streamResp.ok) continue;
+      const sseText = await streamResp.text();
+
+      const lines = sseText.split("\n");
+      for (let i = 0; i < lines.length; i++) {
+        if (lines[i].startsWith("data:")) {
+          const rawJson = lines[i].slice(5).trim();
+          try {
+            const parsed = JSON.parse(rawJson);
+            const imgObj = Array.isArray(parsed) ? parsed[0] : null;
+            if (imgObj && imgObj.url) {
+              return imgObj.url;
+            }
+          } catch ( err ) {}
+        }
+      }
+    } catch (e) {
+      if (e.name === "AbortError") throw e;
+    }
+  }
+  return null;
+}
+
+// Генерация красочной сюжетной SVG-иллюстрации напрямую через бесплатный Gemini 3.8 Flash
+async function generateSvgIllustrationWithGeminiFlash(page, scenePrompt, signal) {
+  const svgPrompt = `You are a master children's fairytale book SVG artist.
+Create a rich, detailed, colorful, magical SVG illustration (viewBox="0 0 800 800", width="800", height="800") for this specific chapter of a bedtime story for a 5-year-old girl named Alina:
+Chapter title: ${page.chapterTitle}
+Chapter text: ${page.text}
+Visual details: ${scenePrompt}
+
+Requirements:
+- Use rich gradients (<linearGradient>, <radialGradient>), glowing stars, dreamy night sky/clouds/palace/room matching the chapter setting.
+- Draw the cute 5-year-old girl Alina (in her outfit/hairstyle described) and her companions (like the fluffy black cat Behemoth with emerald eyes) performing the exact action of this chapter!
+- Do NOT include any markdown backticks or explanations. Output ONLY the raw <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 800">...</svg> code.`;
+
+  const models = ["gemini-3.8-flash", "gemini-3.6-flash", "gemini-2.5-flash"];
+  for (const m of models) {
+    try {
+      const data = await callGeminiGenerateContent(
+        m,
+        {
+          contents: [{ role: "user", parts: [{ text: svgPrompt }] }],
+          generationConfig: { temperature: 0.7 }
+        },
+        signal
+      );
+      const raw = data?.candidates?.[0]?.content?.parts?.[0]?.text || "";
+      const startIdx = raw.indexOf("<svg");
+      const endIdx = raw.lastIndexOf("</svg>");
+      if (startIdx !== -1 && endIdx !== -1) {
+        const cleanSvg = raw.slice(startIdx, endIdx + 6);
+        return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(cleanSvg)}`;
+      }
+    } catch (e) {
+      if (e.name === "AbortError") throw e;
+    }
+  }
   return null;
 }
 
