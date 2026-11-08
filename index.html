@@ -12,7 +12,7 @@
   <link rel="manifest" href="./manifest.json" />
   <link rel="icon" type="image/svg+xml" href="./icon.svg" />
   <link rel="apple-touch-icon" href="./icon.svg" />
-  <link rel="stylesheet" href="./styles.css?v=7" />
+  <link rel="stylesheet" href="./styles.css?v=8" />
 </head>
 <body>
   <!-- Celestial Starry Sky Background -->
@@ -411,40 +411,53 @@
     </section>
   </div>
 
-  <!-- GEMINI SETTINGS MODAL -->
+  <!-- SETTINGS MODAL (MICROSOFT MAI IMAGE 2.6 + POLLINATIONS GITHUB LOGIN) -->
   <div class="modal-backdrop hidden" id="settingsModal">
     <div class="modal-sheet">
       <div class="card-header">
-        <h2 class="card-title">✨ Настройки Google Gemini</h2>
+        <h2 class="card-title">✨ Подключение Microsoft MAI 2.6</h2>
         <button type="button" class="icon-btn" id="btnCloseSettings" style="width: 34px; height: 34px;">✕</button>
       </div>
 
-      <div class="step-box">
-        <strong style="color: #fde047;">🔑 Ваш ключ Google Gemini API уже встроен и активен!</strong><br />
-        Приложение использует исключительно <strong>Google Gemini</strong> и для сочинения сказок (с анализом фото Алины), и для рисования иллюстраций к каждой главе.<br /><br />
-        <em>Важная деталь для России:</em> Сервер Google Gemini требует включённого VPN (на вашем iPhone с VPN всё работает напрямую!). Если вы хотите, чтобы этот ключ работал даже <strong>без VPN</strong>, откройте один раз с VPN ссылку вашего проекта Google Cloud:<br />
-        <a href="https://console.developers.google.com/apis/api/aiplatform.googleapis.com/overview?project=452686405470" target="_blank" rel="noopener" style="color: #7dd3fc; word-break: break-all;">Включить Vertex AI API (проект 452686405470)</a> и нажмите синюю кнопку <strong>«Enable / Включить»</strong>.
+      <div class="step-box" style="border-color: rgba(253, 224, 71, 0.55); background: rgba(30, 27, 75, 0.78);">
+        <strong style="color: #fde047;">🎨 Бесплатный вход через ваш GitHub (без карт и оплат!)</strong><br />
+        Подключите ваш бесплатный аккаунт на <strong>enter.pollinations.ai</strong> через GitHub — это откроет доступ к <strong>Microsoft MAI Image 2.6</strong>, <strong>FLUX 1.1 Pro / Kontext Pro</strong> (рисование прямо по фото Алины!) и <strong>Gemini 3.8 Flash</strong>:<br /><br />
+        <strong>Способ А (Автоматический в 1 клик):</strong>
+        <button type="button" class="generate-btn" id="btnStartDeviceAuth" style="padding: 12px 14px; font-size: 0.9rem; margin: 8px 0;">
+          ⚡ Войти через GitHub в 1 клик
+        </button>
+
+        <div class="device-code-box hidden" id="deviceAuthBox">
+          <div>В открывшемся окне войдите через <strong>GitHub</strong> и нажмите <strong>Approve / Authorize</strong>:</div>
+          <div class="device-code-digits" id="deviceUserCode">----</div>
+          <a href="#" target="_blank" rel="noopener" id="deviceVerifyLink" class="btn-upload" style="justify-content: center; width: 100%; margin-bottom: 6px;">
+            🔗 Открыть окно подтверждения
+          </a>
+          <div style="font-size: 0.75rem; color: #fde047;" id="deviceAuthStatus">Ожидаем подтверждения...</div>
+        </div>
       </div>
 
       <div class="step-box" style="margin-bottom: 0;">
-        <label class="sub-label" for="inputGeminiKey" style="margin-top: 0;">Ключ Google Gemini API:</label>
+        <strong>Способ Б (Вставить ключ вручную):</strong><br />
+        Или зайдите на <a href="https://enter.pollinations.ai/keys" target="_blank" rel="noopener" style="color: #7dd3fc;">enter.pollinations.ai/keys</a> (войдите через GitHub), создайте Secret Key (<code>sk_...</code>) и вставьте сюда:
         <input
           type="password"
           id="inputGeminiKey"
           class="magic-input"
-          placeholder="Ваш ключ Gemini API..."
+          style="margin-top: 8px;"
+          placeholder="sk_... (ключ с enter.pollinations.ai/keys)"
         />
         <div style="display: flex; gap: 8px; margin-top: 10px;">
           <button type="button" class="btn-upload" id="btnSaveAllKeys" style="flex: 1; justify-content: center; padding: 11px;">💾 Сохранить ключ</button>
-          <button type="button" class="btn-upload" id="btnResetDefaultKey" style="background: rgba(56, 189, 248, 0.2);">Вернуть ваш ключ</button>
+          <button type="button" class="btn-upload" id="btnResetDefaultKey" style="background: rgba(244, 63, 94, 0.22);">Очистить</button>
         </div>
         <div id="geminiDiagLog" style="margin-top: 10px; font-size: 0.74rem; color: #bae6fd; opacity: 0.9;">
-          Статус: Готов к работе (версия v7 • 100% Nano Banana)
+          Статус: Готов к подключению Microsoft MAI 2.6 (версия v8)
         </div>
       </div>
     </div>
   </div>
 
-  <script src="./app.js?v=7"></script>
+  <script src="./app.js?v=8"></script>
 </body>
 </html>
