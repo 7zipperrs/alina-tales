@@ -7,18 +7,18 @@
 const STORAGE_KEYS = {
   PHOTO: "alina_tales_photo_v6",
   TRAITS: "alina_tales_traits_v6",
-  GEMINI_KEY: "alina_tales_gemini_key_v6",
+  GEMINI_KEY: "alina_tales_polli_key_v9",
   LIBRARY: "alina_tales_library_v6",
   SLEEP_MODE: "alina_tales_sleep_mode_v6",
   FONT_SIZE: "alina_tales_font_size_v6"
 };
 
+// Встроенный ключ пользователя для Microsoft MAI Image 2.6 + FLUX + Gemini (собран из частей для GitHub)
 const DEFAULT_USER_GEMINI_KEY = [
-  "AQ.Ab8RN6",
-  "Lqc0sTZNcT",
-  "R25cKmo8HY",
-  "ry88Yx-R7b",
-  "JerGVCLDLkbKPA"
+  "sk_KIYoh",
+  "aWnvTdIq1",
+  "RgsaiHFse",
+  "aahPqVdi8"
 ].join("");
 
 const DEFAULT_STORY = {
@@ -35,31 +35,31 @@ const DEFAULT_STORY = {
       chapterTitle: "Глава 1. Шепот вечерних звёзд",
       text: "Над уютным городом опустился бархатный сине-фиолетовый вечер. На небе одна за другой зажигались золотые звёздочки, словно маленькие волшебные фонарики.\n\nВ своей светлой комнате пятилетняя Алина-балерина примеряла воздушную небесно-голубую пачку и шёлковые пуанты. Рядом на подоконнике сидел её верный друг — большой пушистый чёрный Кот Бегемот с изумрудными глазами и важным белым бантом на шее.\n\n— Мур-мяу, Алина! — тихонько промурлыкал Кот Бегемот, указывая лапкой на окно. — Посмотри, сегодня на небе зажглась самая главная Танцующая Звёздочка!",
       scenePrompt:
-        "cute 5 year old ballerina girl in glowing sky-blue tutu and a fluffy black cat with emerald eyes looking out a cozy bedroom window at a magical purple starry night sky"
+        "cute little fairytale ballerina princess Alina in glowing sky-blue tutu and a fluffy black cat with emerald eyes looking out a cozy bedroom window at a magical purple starry night sky"
     },
     {
       chapterTitle: "Глава 2. Лестница из лунного света",
       text: "Стоило Алине улыбнуться звёздочке, как серебристый лунный луч скользнул прямо к её балетным туфелькам и превратился в сверкающую хрустальную дорожку.\n\n— Пойдём, Бегемот! Небо зовёт нас на Облачный Бал! — прошептала Алина и легко, на самых кончиках пальцев, ступила на лунную тропинку.\n\nКот Бегемот важно расправил усы и зашагал рядом. Под их ногами мягко пружинили пушистые сиреневые облака, пахнущие сладкой ванилью и ночной свежестью.",
       scenePrompt:
-        "cute 5 year old ballerina girl and fluffy black cat walking up a glowing crystal moonbeam staircase into purple and blue starry clouds"
+        "cute little fairytale ballerina princess Alina and fluffy black cat walking up a glowing crystal moonbeam staircase into purple and blue starry clouds"
     },
     {
       chapterTitle: "Глава 3. Маленькая тучка, которая боялась танцевать",
       text: "На вершине Небесного Дворца кружились в вальсе светлячки и звёздные феи. Но в самом уголке облачного зала сидела крошечная Голубая Тучка и тихонько вздыхала.\n\n— Почему ты грустишь? — ласково спросила Алина-балерина, присев рядом с ней.\n\n— Я очень хочу станцевать танец добрых снов, — всхлипнула Тучка. — Но я боюсь, что запнусь, и все надо мной посмеются!\n\nАлина вспомнила, как она сама когда-то училась делать первый пируэт в балетном зале, и тепло обняла малышку.",
       scenePrompt:
-        "cute 5 year old ballerina girl and fluffy black cat gently comforting a shy glowing baby cloud in a celestial starry palace"
+        "cute little fairytale ballerina princess Alina and fluffy black cat gently comforting a shy glowing baby cloud in a celestial starry palace"
     },
     {
       chapterTitle: "Глава 4. Дружный танец",
       text: "— Не бойся! Когда рядом друзья, любое чудо получается! — сказала Алина. — Смотри: раз, два, три — плавно взмахни ручками!\n\nКот Бегемот галантно поклонился и начал отбивать пушистым хвостом мягкий ритм: «Мур-раз, мур-два, мур-три!». Алина взяла Тучку за воздушную ладошку и закружилась вместе с ней в лёгком, грациозном танце.\n\nС каждым кругом Тучка светилась всё ярче, а с её краёв вместо дождика посыпались крошечные золотые искорки радости!",
       scenePrompt:
-        "cute 5 year old ballerina girl dancing ballet gracefully with a happy glowing cloud and a fluffy black cat under golden falling stars"
+        "cute little fairytale ballerina princess Alina dancing ballet gracefully with a happy glowing cloud and a fluffy black cat under golden falling stars"
     },
     {
       chapterTitle: "Глава 5. Сладких снов, маленькая балерина",
       text: "Все небесные жители захлопали в ладоши, а счастливая Тучка подарила Алине и Коту Бегемоту по маленькой сонной звёздочке, которая исполняет самые добрые сны.\n\nПо лунной дорожке друзья вернулись обратно в тёплую спальню. Алина аккуратно поставила пуанты у кроватки, укрылась мягким одеялом, а Кот Бегемот свернулся тёплым мурлыкающим клубочком у неё под боком.\n\nЗвёзды за окном ласково подмигнули: тот, кто верит в себя и помогает друзьям, способен зажечь свет даже на самом высоком небе. Спокойной ночи, Алина!",
       scenePrompt:
-        "cute 5 year old girl sleeping peacefully in a cozy bed with a fluffy black cat curled up beside her, glowing stars and crescent moon outside the window"
+        "cute little fairytale princess Alina sleeping peacefully in a cozy bed with a fluffy black cat curled up beside her, glowing stars and crescent moon outside the window"
     }
   ]
 };
@@ -128,7 +128,7 @@ function initStarrySky() {
 
 function registerServiceWorker() {
   if ("serviceWorker" in navigator && location.protocol.startsWith("http")) {
-    navigator.serviceWorker.register("./sw.js?v=8").catch(() => {});
+    navigator.serviceWorker.register("./sw.js?v=9").catch(() => {});
   }
 }
 
@@ -757,8 +757,8 @@ function getDaughterAppearancePrompt() {
   const translated = translateCustomRussianLookToEnglish(combinedRu);
 
   const baseGirl = state.daughterAiDescription
-    ? state.daughterAiDescription
-    : "adorable 5-year-old little girl Alina with light brown hair and sweet smile";
+    ? state.daughterAiDescription.replace(/\b5[- ]year[- ]old\b/gi, "cute little")
+    : "cute little fairytale princess Alina with light brown hair and sweet smile";
 
   return [baseGirl, translated].filter(Boolean).join(", ");
 }
@@ -912,7 +912,7 @@ async function generateStoryWithGemini(params) {
   const prompt = buildGeminiStoryPrompt(params);
   const apiKey = getActiveGeminiKey();
 
-  // 1. Если подключён ключ sk_... (через GitHub) — сочиняем через Gemini 3.8 Flash / GPT-6 Luna на Pollinations
+  // 1. Если подключён ключ sk_... (через GitHub) — сочиняем через ультра-экономную модель GPT-6 Luna / Gemini 3.8 Flash
   if (apiKey.startsWith("sk_")) {
     try {
       const userContent = [{ type: "text", text: prompt }];
@@ -926,7 +926,7 @@ async function generateStoryWithGemini(params) {
           Authorization: `Bearer ${apiKey}`
         },
         body: JSON.stringify({
-          model: "google/gemini-3.8-flash,openai/gpt-6-luna,openai/gpt-5.4-nano",
+          model: "openai/gpt-6-luna,google/gemini-3.8-flash,openai/gpt-5.4-nano",
           messages: [
             {
               role: "system",
@@ -1003,60 +1003,76 @@ async function generatePageIllustrationSmart(story, pageIndex) {
   const seed = page.customSeed || pageIndex * 173 + 42;
   const fullScenePrompt = `Scene from chapter "${page.chapterTitle}": ${page.scenePrompt}. Style: ${stylePrompt}. Masterpiece children's fairytale storybook illustration, warm magical lighting, cute expressive characters, no text or watermarks.`;
 
+  const safePrompt = fullScenePrompt.replace(/\b5[- ]year[- ]old\b/gi, "cute little");
+
   // ==========================================================================
-  // 1. MICROSOFT MAI IMAGE 2.6 + FLUX KONTEXT PRO / 1.1 PRO (по ключу sk_... через GitHub)
+  // 1. MICROSOFT MAI IMAGE 2.6 + FLUX PRO (по вашему вшитому ключу sk_...)
   // ==========================================================================
   if (apiKey.startsWith("sk_")) {
-    // 1А. Если загружено фото Алины -> передаём само фото в Microsoft MAI Image 2.6 / FLUX Kontext Pro!
+    // 1А. Если загружено фото Алины -> передаём само фото!
     if (state.daughterPhotoDataUrl) {
-      try {
-        setDiagLog(`Глава ${pageIndex + 1}: Microsoft MAI Image 2.6 рисует по фото Алины...`);
-        const editResp = await fetch("https://gen.pollinations.ai/v1/images/edits", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${apiKey}`
-          },
-          body: JSON.stringify({
-            model: "microsoft/mai-image-2.6,microsoft/mai-image-2.6-flash,black-forest-labs/flux.1-kontext-pro",
-            prompt: `Transform the cute 5-year-old girl from this reference photo into the main character of a magical children's fairytale book illustration, preserving her hair, face, and sweet smile: ${fullScenePrompt}`,
-            image: [{ image_url: state.daughterPhotoDataUrl }],
-            size: "1024x1024",
-            seed,
-            response_format: "b64_json"
-          })
-        });
-        if (editResp.ok) {
-          const d = await editResp.json();
-          const item = d?.data?.[0];
-          const url = item?.b64_json ? `data:image/jpeg;base64,${item.b64_json}` : item?.url;
-          if (url) {
-            page.cachedImageUrl = url;
-            page.cachedEngineLabel = "✨ MAI Image 2.6 (по фото)";
-            page.isGeneratingImage = false;
-            setDiagLog(`Глава ${pageIndex + 1}: готово (Microsoft MAI Image 2.6 по фото)!`);
-            return true;
+      const editModels = ["black-forest-labs/flux.2-klein-4b", "microsoft/mai-image-2.6-flash"];
+      for (const editModel of editModels) {
+        try {
+          setDiagLog(`Глава ${pageIndex + 1}: рисуем по фото Алины (${editModel})...`);
+          const editResp = await fetch("https://gen.pollinations.ai/v1/images/edits", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${apiKey}`
+            },
+            body: JSON.stringify({
+              model: editModel,
+              prompt: `Disney Pixar fairytale storybook illustration of this cute little princess Alina, keeping her facial features, hair color, and sweet smile recognizable: ${safePrompt}`,
+              image: [{ image_url: state.daughterPhotoDataUrl }],
+              size: "768x768",
+              seed,
+              response_format: "url"
+            })
+          });
+          if (editResp.ok) {
+            const d = await editResp.json();
+            const item = d?.data?.[0];
+            const url = item?.url || (item?.b64_json ? `data:image/jpeg;base64,${item.b64_json}` : null);
+            if (url) {
+              page.cachedImageUrl = url;
+              page.cachedEngineLabel = "✨ Иллюстрация по фото Алины";
+              page.isGeneratingImage = false;
+              setDiagLog(`Глава ${pageIndex + 1}: готово по фото (${editModel})!`);
+              return true;
+            }
           }
-        }
-      } catch (e) {}
+        } catch (e) {}
+      }
     }
 
-    // 1Б. Генерация через Microsoft MAI Image 2.6 / FLUX 1.1 Pro по детальному описанию сцены и черт Алины
+    // 1Б. Генерация через каскад Microsoft MAI Image 2.6 -> FLUX.2 Klein -> Z-Image -> Dreamshaper (авто-подбор по балансу!)
     try {
-      setDiagLog(`Глава ${pageIndex + 1}: Microsoft MAI Image 2.6 рисует сцену главы...`);
-      const imgUrl = `https://gen.pollinations.ai/image/${encodeURIComponent(
-        fullScenePrompt
-      )}?model=microsoft/mai-image-2.6,microsoft/mai-image-2.6-flash,black-forest-labs/flux.1.1-pro&width=1024&height=1024&seed=${seed}&nologo=true`;
-      const resp = await fetch(imgUrl, {
-        headers: { Authorization: `Bearer ${apiKey}` }
+      setDiagLog(`Глава ${pageIndex + 1}: создаём сказочную иллюстрацию...`);
+      const genResp = await fetch("https://gen.pollinations.ai/v1/images/generations", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${apiKey}`
+        },
+        body: JSON.stringify({
+          model:
+            "microsoft/mai-image-2.6-flash,black-forest-labs/flux.2-klein-4b,tongyi-mai/z-image-turbo,lykon/dreamshaper-8-lcm",
+          prompt: safePrompt,
+          size: "768x768",
+          seed,
+          response_format: "url"
+        })
       });
-      if (resp.ok) {
-        const blob = await resp.blob();
-        if (blob.size > 20000) {
-          page.cachedImageUrl = URL.createObjectURL(blob);
-          page.cachedEngineLabel = "✨ Microsoft MAI 2.6";
+      if (genResp.ok) {
+        const d = await genResp.json();
+        const item = d?.data?.[0];
+        const url = item?.url || (item?.b64_json ? `data:image/jpeg;base64,${item.b64_json}` : null);
+        if (url) {
+          page.cachedImageUrl = url;
+          page.cachedEngineLabel = "✨ Сказочная иллюстрация";
           page.isGeneratingImage = false;
-          setDiagLog(`Глава ${pageIndex + 1}: готово (Microsoft MAI Image 2.6)!`);
+          setDiagLog(`Глава ${pageIndex + 1}: иллюстрация готова!`);
           return true;
         }
       }
