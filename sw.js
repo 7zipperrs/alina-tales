@@ -1,4 +1,4 @@
-const CACHE_NAME = "starlight-tales-v7";
+const CACHE_NAME = "starlight-tales-v8";
 const ASSETS = [
   "./",
   "./index.html",
