@@ -128,7 +128,7 @@ function initStarrySky() {
 
 function registerServiceWorker() {
   if ("serviceWorker" in navigator && location.protocol.startsWith("http")) {
-    navigator.serviceWorker.register("./sw.js?v=7").catch(() => {});
+    navigator.serviceWorker.register("./sw.js?v=8").catch(() => {});
   }
 }
 
@@ -203,17 +203,23 @@ function bindEvents() {
     if (e.target === settingsModal) settingsModal.classList.add("hidden");
   });
 
+  const btnDevice = document.getElementById("btnStartDeviceAuth");
+  if (btnDevice) {
+    btnDevice.addEventListener("click", startPollinationsDeviceFlow);
+  }
+
   document.getElementById("btnSaveAllKeys").addEventListener("click", () => {
-    const val = document.getElementById("inputGeminiKey").value.trim() || DEFAULT_USER_GEMINI_KEY;
-    localStorage.setItem(STORAGE_KEYS.GEMINI_KEY, val);
-    document.getElementById("inputGeminiKey").value = val;
+    const val = document.getElementById("inputGeminiKey").value.trim();
+    if (val) {
+      localStorage.setItem(STORAGE_KEYS.GEMINI_KEY, val);
+    }
     updateAiStatusUI();
     settingsModal.classList.add("hidden");
   });
 
   document.getElementById("btnResetDefaultKey").addEventListener("click", () => {
-    localStorage.setItem(STORAGE_KEYS.GEMINI_KEY, DEFAULT_USER_GEMINI_KEY);
-    document.getElementById("inputGeminiKey").value = DEFAULT_USER_GEMINI_KEY;
+    localStorage.removeItem(STORAGE_KEYS.GEMINI_KEY);
+    document.getElementById("inputGeminiKey").value = "";
     updateAiStatusUI();
   });
 
@@ -454,10 +460,73 @@ function updateAiStatusUI() {
   const subtitle = document.getElementById("aiModeSubtitle");
   const dot = document.getElementById("apiStatusDot");
   subtitle.textContent = "Добрая книга чудес перед сном 🌙";
-  if (key && key.length > 10) {
+  if (key && key.startsWith("sk_")) {
+    dot.classList.add("connected");
+    setDiagLog("Статус: Подключён Microsoft MAI Image 2.6 + Gemini 3.8 (через GitHub) ✨");
+  } else if (key && key.length > 10) {
     dot.classList.add("connected");
   } else {
     dot.classList.remove("connected");
+  }
+}
+
+// ============================================================================
+// БЫСТРЫЙ ВХОД ЧЕРЕЗ GITHUB В 1 КЛИК (ДЛЯ MICROSOFT MAI IMAGE 2.6 БЕЗ КАРТ)
+// ============================================================================
+async function startPollinationsDeviceFlow() {
+  const box = document.getElementById("deviceAuthBox");
+  const codeEl = document.getElementById("deviceUserCode");
+  const linkEl = document.getElementById("deviceVerifyLink");
+  const statusEl = document.getElementById("deviceAuthStatus");
+
+  box.classList.remove("hidden");
+  codeEl.textContent = "⏳...";
+  statusEl.textContent = "Создаём код подключения...";
+
+  try {
+    const resp = await fetch("https://enter.pollinations.ai/api/device/code", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({})
+    });
+    if (!resp.ok) throw new Error("Ошибка получения кода");
+    const data = await resp.json();
+
+    codeEl.textContent = data.user_code || "----";
+    linkEl.href = data.verification_uri_complete || "https://enter.pollinations.ai/device";
+    statusEl.textContent = "Нажмите кнопку выше, войдите через GitHub и нажмите Approve!";
+
+    window.open(data.verification_uri_complete, "_blank", "noopener");
+
+    if (state.devicePollTimer) clearInterval(state.devicePollTimer);
+    const intervalMs = Math.max(4, data.interval || 5) * 1000;
+
+    state.devicePollTimer = setInterval(async () => {
+      try {
+        const pollResp = await fetch("https://enter.pollinations.ai/api/oauth/token", {
+          method: "POST",
+          headers: { "Content-Type": "application/x-www-form-urlencoded" },
+          body: new URLSearchParams({
+            grant_type: "urn:ietf:params:oauth:grant-type:device_code",
+            device_code: data.device_code
+          })
+        });
+        const tokenData = await pollResp.json();
+        if (tokenData && tokenData.access_token) {
+          clearInterval(state.devicePollTimer);
+          state.devicePollTimer = null;
+          localStorage.setItem(STORAGE_KEYS.GEMINI_KEY, tokenData.access_token);
+          document.getElementById("inputGeminiKey").value = tokenData.access_token;
+          statusEl.textContent = "✅ Microsoft MAI Image 2.6 успешно подключён!";
+          updateAiStatusUI();
+          setTimeout(() => {
+            document.getElementById("settingsModal").classList.add("hidden");
+          }, 1000);
+        }
+      } catch (e) {}
+    }, intervalMs);
+  } catch (err) {
+    statusEl.textContent = "Нажмите на ссылку enter.pollinations.ai/keys ниже и скопируйте ключ sk_...";
   }
 }
 
@@ -560,8 +629,47 @@ function updatePhotoUI() {
 async function analyzePhotoWithGemini(dataUrl) {
   const analysisText = document.getElementById("photoAnalysisText");
   const base64Data = dataUrl.split(",")[1];
+  const apiKey = getActiveGeminiKey();
   analysisText.textContent = "✨ Запоминаем черты Алины по фото...";
 
+  // 1. Если подключён ключ sk_... (через GitHub)
+  if (apiKey.startsWith("sk_")) {
+    try {
+      const resp = await fetch("https://gen.pollinations.ai/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${apiKey}`
+        },
+        body: JSON.stringify({
+          model: "google/gemini-3.8-flash,openai/gpt-5.4-nano",
+          messages: [
+            {
+              role: "user",
+              content: [
+                {
+                  type: "text",
+                  text: "Describe this child's exact hair color, hair style, bangs, eye color, face shape, and sweet smile in 20 concise English words for a children's storybook illustrator so she looks recognizable. Output ONLY the English description."
+                },
+                { type: "image_url", image_url: { url: dataUrl } }
+              ]
+            }
+          ]
+        })
+      });
+      if (resp.ok) {
+        const d = await resp.json();
+        const desc = d?.choices?.[0]?.message?.content?.trim();
+        if (desc) {
+          state.daughterAiDescription = desc;
+          analysisText.textContent = "✨ Черты лица и причёска Алины с фото сохранены для иллюстраций!";
+          return;
+        }
+      }
+    } catch (e) {}
+  }
+
+  // 2. Прямой вызов Google AI Studio
   const visionModels = ["gemini-3.8-flash", "gemini-3.6-flash", "gemini-3.5-flash-lite", "gemini-2.5-flash"];
   for (const model of visionModels) {
     try {
@@ -802,8 +910,42 @@ function buildGeminiStoryPrompt({ heroes, moral, duration, pagesCount }) {
 
 async function generateStoryWithGemini(params) {
   const prompt = buildGeminiStoryPrompt(params);
-  const parts = [{ text: prompt }];
+  const apiKey = getActiveGeminiKey();
 
+  // 1. Если подключён ключ sk_... (через GitHub) — сочиняем через Gemini 3.8 Flash / GPT-6 Luna на Pollinations
+  if (apiKey.startsWith("sk_")) {
+    try {
+      const userContent = [{ type: "text", text: prompt }];
+      if (state.daughterPhotoDataUrl) {
+        userContent.push({ type: "image_url", image_url: { url: state.daughterPhotoDataUrl } });
+      }
+      const resp = await fetch("https://gen.pollinations.ai/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${apiKey}`
+        },
+        body: JSON.stringify({
+          model: "google/gemini-3.8-flash,openai/gpt-6-luna,openai/gpt-5.4-nano",
+          messages: [
+            {
+              role: "system",
+              content: "You are a warm Russian children's fairy tale writer. Respond ONLY with valid JSON."
+            },
+            { role: "user", content: userContent }
+          ],
+          temperature: 0.85
+        })
+      });
+      if (resp.ok) {
+        const d = await resp.json();
+        return parseStoryJson(d?.choices?.[0]?.message?.content);
+      }
+    } catch (e) {}
+  }
+
+  // 2. Прямой вызов Google AI Studio
+  const parts = [{ text: prompt }];
   if (state.daughterPhotoDataUrl) {
     parts.push({
       inlineData: {
@@ -813,7 +955,6 @@ async function generateStoryWithGemini(params) {
     });
   }
 
-  // Актуальные бесплатные модели Google AI Studio 2026 года
   const textModels = ["gemini-3.8-flash", "gemini-3.6-flash", "gemini-3.5-flash-lite", "gemini-2.5-flash"];
   for (const model of textModels) {
     try {
@@ -849,17 +990,82 @@ function parseStoryJson(rawText) {
 }
 
 // ============================================================================
-// ГЕНЕРАЦИЯ ИЛЛЮСТРАЦИЙ СТРОГО ЧЕРЕЗ GOOGLE NANO BANANA
-// Глава 1 открывается сразу, а главы 2..N дорисовываются в фоне через Nano Banana!
+// ГЕНЕРАЦИЯ ИЛЛЮСТРАЦИЙ ЧЕРЕЗ MICROSOFT MAI IMAGE 2.6 + FLUX PRO (ИЛИ NANO BANANA)
+// Глава 1 открывается сразу, а главы 2..N дорисовываются в фоне!
 // ============================================================================
 async function generatePageIllustrationSmart(story, pageIndex) {
   const page = story.pages[pageIndex];
   if (!page) return false;
 
   page.isGeneratingImage = true;
+  const apiKey = getActiveGeminiKey();
   const stylePrompt = story.style || state.selectedStyle;
+  const seed = page.customSeed || pageIndex * 173 + 42;
   const fullScenePrompt = `Scene from chapter "${page.chapterTitle}": ${page.scenePrompt}. Style: ${stylePrompt}. Masterpiece children's fairytale storybook illustration, warm magical lighting, cute expressive characters, no text or watermarks.`;
 
+  // ==========================================================================
+  // 1. MICROSOFT MAI IMAGE 2.6 + FLUX KONTEXT PRO / 1.1 PRO (по ключу sk_... через GitHub)
+  // ==========================================================================
+  if (apiKey.startsWith("sk_")) {
+    // 1А. Если загружено фото Алины -> передаём само фото в Microsoft MAI Image 2.6 / FLUX Kontext Pro!
+    if (state.daughterPhotoDataUrl) {
+      try {
+        setDiagLog(`Глава ${pageIndex + 1}: Microsoft MAI Image 2.6 рисует по фото Алины...`);
+        const editResp = await fetch("https://gen.pollinations.ai/v1/images/edits", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${apiKey}`
+          },
+          body: JSON.stringify({
+            model: "microsoft/mai-image-2.6,microsoft/mai-image-2.6-flash,black-forest-labs/flux.1-kontext-pro",
+            prompt: `Transform the cute 5-year-old girl from this reference photo into the main character of a magical children's fairytale book illustration, preserving her hair, face, and sweet smile: ${fullScenePrompt}`,
+            image: [{ image_url: state.daughterPhotoDataUrl }],
+            size: "1024x1024",
+            seed,
+            response_format: "b64_json"
+          })
+        });
+        if (editResp.ok) {
+          const d = await editResp.json();
+          const item = d?.data?.[0];
+          const url = item?.b64_json ? `data:image/jpeg;base64,${item.b64_json}` : item?.url;
+          if (url) {
+            page.cachedImageUrl = url;
+            page.cachedEngineLabel = "✨ MAI Image 2.6 (по фото)";
+            page.isGeneratingImage = false;
+            setDiagLog(`Глава ${pageIndex + 1}: готово (Microsoft MAI Image 2.6 по фото)!`);
+            return true;
+          }
+        }
+      } catch (e) {}
+    }
+
+    // 1Б. Генерация через Microsoft MAI Image 2.6 / FLUX 1.1 Pro по детальному описанию сцены и черт Алины
+    try {
+      setDiagLog(`Глава ${pageIndex + 1}: Microsoft MAI Image 2.6 рисует сцену главы...`);
+      const imgUrl = `https://gen.pollinations.ai/image/${encodeURIComponent(
+        fullScenePrompt
+      )}?model=microsoft/mai-image-2.6,microsoft/mai-image-2.6-flash,black-forest-labs/flux.1.1-pro&width=1024&height=1024&seed=${seed}&nologo=true`;
+      const resp = await fetch(imgUrl, {
+        headers: { Authorization: `Bearer ${apiKey}` }
+      });
+      if (resp.ok) {
+        const blob = await resp.blob();
+        if (blob.size > 20000) {
+          page.cachedImageUrl = URL.createObjectURL(blob);
+          page.cachedEngineLabel = "✨ Microsoft MAI 2.6";
+          page.isGeneratingImage = false;
+          setDiagLog(`Глава ${pageIndex + 1}: готово (Microsoft MAI Image 2.6)!`);
+          return true;
+        }
+      }
+    } catch (e) {}
+  }
+
+  // ==========================================================================
+  // 2. Прямой вызов Google Nano Banana (если активен ключ Google AI Studio с бонусом)
+  // ==========================================================================
   const parts = [];
   if (state.daughterPhotoDataUrl) {
     parts.push({
@@ -877,19 +1083,12 @@ async function generatePageIllustrationSmart(story, pageIndex) {
     });
   }
 
-  // Список моделей семейства Google Nano Banana (если одна уже сработала, используем сразу её)
   const nanoModels = state.workingNanoModel
     ? [state.workingNanoModel]
-    : [
-        "gemini-2.5-flash-image",
-        "gemini-3.1-flash-image",
-        "gemini-3.1-flash-lite-image",
-        "gemini-nano-banana-2.1"
-      ];
+    : ["gemini-2.5-flash-image", "gemini-3.1-flash-image", "gemini-3.1-flash-lite-image"];
 
   for (const modelName of nanoModels) {
     try {
-      setDiagLog(`Глава ${pageIndex + 1}: Nano Banana (${modelName}) рисует иллюстрацию...`);
       const res = await callGeminiApi(modelName, {
         contents: [{ parts }],
         generationConfig: {
@@ -907,14 +1106,9 @@ async function generatePageIllustrationSmart(story, pageIndex) {
             page.cachedImageUrl = `data:${mime};base64,${inline.data}`;
             page.cachedEngineLabel = "✨ Nano Banana";
             page.isGeneratingImage = false;
-            setDiagLog(`Глава ${pageIndex + 1}: успешно нарисована через Nano Banana (${modelName})!`);
             return true;
           }
         }
-      } else if (res.status === 429 && (res.errorText || "").includes("limit: 0")) {
-        setDiagLog(
-          `Для работы Nano Banana (${modelName}) в Google AI Studio нужно привязать карту (Set up Billing на aistudio.google.com/apikey)`
-        );
       }
     } catch (e) {}
   }
